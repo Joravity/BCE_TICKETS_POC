@@ -572,7 +572,7 @@
     // 1. Enter your Firebase config once in SysAdmin -> Firebase API Settings.
     // 2. Click "Copy Global Token (for index.html)".
     // 3. Paste the "BSDCFG1:..." token between the quotes below and commit to GitHub.
-    const GLOBAL_FIREBASE_TOKEN = "BSDCFG1:OW4bAFqAjI2RaE05cKiAyaR5cBgp8e2K7DYKRVK5iI3/iSFFXQ6tscfoX0ohKsnZ689oLCFarPDr5jBlaEu/yNfPrExvW3jBgqncXQwtR9WJ79VBEm9YsvXbtVh/TDiSkp71ujYIfR230LX6OxFkF8n0hvJUY0t65tbxvCQBcCuumJKT2j8dMG+H5ISnEzAJSvGEhdR1Hw1Rp52J2icCfiI/z+iP+A14agb+uvbGMm96Tb7u5vk8DAEwxN6W7E4yMTsJicS5mQBAKxeM276DO20NF9u43L4JUCcVm9KkgxxfST5o5cD+11c/B36RpsamZR1rd6GdoKZ3Vypx/tT1nw9Q";
+    const GLOBAL_FIREBASE_TOKEN = "";
 
     // Safe storage helpers so sandboxed previews or restricted browsers never throw SecurityError
     const memoryStorageFallback = {};
@@ -710,8 +710,16 @@
 
     function decodeObfuscatedConfig(token) {
       try {
-        if (!token || typeof token !== 'string' || !token.startsWith('BSDCFG1:')) return null;
-        const bin = atob(token.slice(8).trim());
+        if (!token || typeof token !== 'string') return null;
+        const cleaned = token.trim();
+        if (!cleaned) return null;
+        if (cleaned.startsWith('{')) {
+          const rawParsed = JSON.parse(cleaned);
+          return rawParsed && rawParsed.apiKey && rawParsed.projectId ? rawParsed : null;
+        }
+        const b64 = (cleaned.startsWith('BSDCFG1:') ? cleaned.slice(8) : cleaned).replace(/\s+/g, '');
+        if (!b64) return null;
+        const bin = atob(b64);
         const saltBytes = new TextEncoder().encode(CONFIG_CIPHER_SALT);
         const bytes = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) {
@@ -723,6 +731,19 @@
       } catch (e) {
         return null;
       }
+    }
+
+    function hasInvalidGlobalToken() {
+      const raw = typeof GLOBAL_FIREBASE_TOKEN === 'string' ? GLOBAL_FIREBASE_TOKEN.trim() : '';
+      return Boolean(raw && !decodeObfuscatedConfig(raw));
+    }
+
+    function getGlobalTokenStatus() {
+      const raw = typeof GLOBAL_FIREBASE_TOKEN === 'string' ? GLOBAL_FIREBASE_TOKEN.trim() : '';
+      if (!raw) return { state: 'empty', label: 'Empty in index.html' };
+      const decoded = decodeObfuscatedConfig(raw);
+      if (decoded) return { state: 'valid', label: `Valid (${decoded.projectId})` };
+      return { state: 'invalid', label: 'Invalid / malformed token in index.html' };
     }
 
     function getFirebaseConfigSource() {
@@ -3301,6 +3322,16 @@
                   <div class="font-mono font-bold text-slate-900 dark:text-white mt-1">${localKb} KB</div>
                 </div>
                 <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800 col-span-2">
+                  <div class="text-[10px] font-mono uppercase text-slate-400">HTML Global Token</div>
+                  <div class="font-mono text-[11px] font-semibold mt-1 ${
+                    getGlobalTokenStatus().state === 'valid'
+                      ? 'text-emerald-500'
+                      : getGlobalTokenStatus().state === 'invalid'
+                        ? 'text-red-500'
+                        : 'text-slate-500 dark:text-slate-400'
+                  }">${escapeHtml(getGlobalTokenStatus().label)}</div>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800 col-span-2">
                   <div class="text-[10px] font-mono uppercase text-slate-400">Auth / Path Mode</div>
                   <div class="font-mono text-[11px] text-slate-700 dark:text-slate-300 mt-1">${escapeHtml(cloudInfo.authStatus)} &bull; ${escapeHtml(cloudInfo.pathMode)}</div>
                 </div>
@@ -5049,7 +5080,7 @@
   <script type="module">
     import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, initializeFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     /********************************************************************
      * API CONFIGURATION NOTE:
@@ -5231,10 +5262,14 @@
             : DEFAULT_APP_ID;
 
         fbApp = initializeApp(firebaseConfig, `bsd-sync-${++instanceCounter}`);
-        db = getFirestore(fbApp);
-        auth = getAuth(fbApp);
+        try {
+          db = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
+        } catch (fsErr) {
+          db = getFirestore(fbApp);
+        }
 
         if (isEnvMode) {
+          auth = getAuth(fbApp);
           if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             const cred = await signInWithCustomToken(auth, __initial_auth_token);
             activeUser = cred.user;
@@ -5244,11 +5279,17 @@
           }
           if (!activeUser) return;
         } else {
+          // Wrap getAuth + anonymous sign-in inside try/catch with a timeout so private tabs
+          // or projects without Anonymous Auth never crash or stall Firestore test-mode sync.
           try {
-            const cred = await signInAnonymously(auth);
+            auth = getAuth(fbApp);
+            const cred = await Promise.race([
+              signInAnonymously(auth),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('auth-timeout')), 4000)),
+            ]);
             activeUser = cred.user;
           } catch (authErr) {
-            console.info('Anonymous Auth not enabled on project; using Firestore Test Mode:', authErr.code);
+            console.info('Skipping Firebase Auth (using Firestore Test Mode):', authErr && (authErr.code || authErr.message));
             externalTestModeAllowed = true;
           }
         }
@@ -5294,6 +5335,17 @@
 
       if (savedUserConfig && savedUserConfig.projectId && savedUserConfig.apiKey) {
         await connectWithConfig(savedUserConfig, false);
+        return;
+      }
+
+      if (typeof window.hasInvalidGlobalToken === 'function' && window.hasInvalidGlobalToken()) {
+        window.updateSyncStatusUI(
+          'error',
+          'GLOBAL_FIREBASE_TOKEN in index.html could not be decoded. Re-copy it from SysAdmin -> Firebase API Settings.'
+        );
+        if (window.logSystemEvent) {
+          window.logSystemEvent('error', 'GLOBAL_FIREBASE_TOKEN is set in index.html but failed to decode.');
+        }
         return;
       }
 
