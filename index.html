@@ -77,6 +77,11 @@
             <span>MSE</span>
             <span id="nav-badge-mse" class="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-purple-500/20 text-purple-700 dark:text-purple-300">0</span>
           </button>
+          <button type="button" id="nav-btn-stats" onclick="navigateTo('stats')"
+            class="flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap">
+            <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
+            <span>Statistics</span>
+          </button>
         </nav>
 
         <!-- Global Actions -->
@@ -556,9 +561,95 @@
   <!-- ==================== MAIN APPLICATION SCRIPT ==================== -->
   <script>
     /********************************************************************
-     * 1. CONSTANTS & EXACT DROPDOWN OPTIONS
+     * 1. CONSTANTS, SECURITY HELPERS & EXACT DROPDOWN OPTIONS
      ********************************************************************/
     const LOCAL_STORAGE_KEY = 'broadcast_support_desk_local_v4';
+    const ADMIN_AUTH_KEY = 'broadcast_support_admin_hash_v1';
+    const OBFUSCATED_FB_KEY = 'broadcast_support_fb_cfg_enc_v1';
+    const CONFIG_CIPHER_SALT = 'BSD-OPS-KEY-MASK-2026-v1';
+
+    // Safe storage helpers so sandboxed previews or restricted browsers never throw SecurityError
+    const memoryStorageFallback = {};
+    function safeStorageGet(key) {
+      try {
+        return window.localStorage.getItem(key);
+      } catch (e) {
+        return Object.prototype.hasOwnProperty.call(memoryStorageFallback, key)
+          ? memoryStorageFallback[key]
+          : null;
+      }
+    }
+    function safeStorageSet(key, val) {
+      memoryStorageFallback[key] = String(val);
+      try {
+        window.localStorage.setItem(key, String(val));
+      } catch (e) {}
+    }
+    function safeStorageRemove(key) {
+      delete memoryStorageFallback[key];
+      try {
+        window.localStorage.removeItem(key);
+      } catch (e) {}
+    }
+
+    /**
+     * Encodes/obfuscates Firebase config so it is never stored or shared as plain JSON.
+     * Note: Web Firebase SDK still needs the decoded values at runtime, so always pair
+    const DEFAULT_ADMIN_HASH = sha256Hex('admin');
+
+    function getAdminPasswordHash() {
+      const stored = safeStorageGet(ADMIN_AUTH_KEY);
+      if (stored && stored.length === 64) return stored;
+      return DEFAULT_ADMIN_HASH;
+    }
+
+    function setAdminPasswordHashLocal(hash) {
+      safeStorageSet(ADMIN_AUTH_KEY, hash);
+    }
+      let bin = '';
+      for (let i = 0; i < out.length; i++) bin += String.fromCharCode(out[i]);
+      return 'BSDCFG1:' + btoa(bin);
+    }
+
+    function decodeObfuscatedConfig(token) {
+      try {
+        if (!token || typeof token !== 'string' || !token.startsWith('BSDCFG1:')) return null;
+        const bin = atob(token.slice(8).trim());
+        const saltBytes = new TextEncoder().encode(CONFIG_CIPHER_SALT);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) {
+          bytes[i] = bin.charCodeAt(i) ^ saltBytes[i % saltBytes.length] ^ ((i * 31) & 0xff);
+        }
+        const parsed = JSON.parse(new TextDecoder().decode(bytes));
+        if (parsed && parsed.projectId && parsed.apiKey) return parsed;
+        return null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function getSavedFirebaseConfig() {
+      const raw = safeStorageGet(OBFUSCATED_FB_KEY);
+      return decodeObfuscatedConfig(raw);
+    }
+
+    function saveObfuscatedFirebaseConfig(cfg) {
+      const encoded = encodeObfuscatedConfig(cfg);
+      safeStorageSet(OBFUSCATED_FB_KEY, encoded);
+      return encoded;
+    }
+
+    function maskSecretValue(val, keepEnd = 4) {
+      const s = String(val || '');
+      if (!s) return 'Not set';
+      if (s.length <= keepEnd + 2) return '••••••••';
+      return '••••••••••••' + s.slice(-keepEnd);
+    }
+
+    function computeConfigFingerprint(cfg) {
+      if (!cfg) return 'None';
+      return sha256Hex(`${cfg.projectId}|${cfg.apiKey}|${cfg.appId}`).slice(0, 16).toUpperCase();
+    }
 
     const PRIORITIES = [
       'P1 - Critical',
@@ -640,14 +731,14 @@
     };
 
     // Navigation & View State
-    let activeView = 'home'; // 'home' | 'mcr' | 'eng' | 'mse' | 'admin'
+    let activeView = 'home'; // 'home' | 'mcr' | 'eng' | 'mse' | 'stats' | 'admin'
     let activeEngTab = 'tickets'; // 'tickets' | 'handover'
     let activeEngSection = 'all'; // 'all' | 'escalated' | TicketType | 'closed'
     let activeMseSection = 'all'; // 'all' | 'escalated' | TicketType | 'closed'
     let activeHandoverId = null; // null = list view, string = opened handover sheet
     let isHandoverMaximised = false;
-
-    // Filter State
+    let isAdminAuthenticated = false;
+    let statsEquipmentSearch = '';
     let mcrFilters = { search: '', status: 'ALL', priority: 'ALL', impact: 'ALL' };
     let engFilters = { search: '', priority: 'ALL', client: 'ALL', service: 'ALL', impact: 'ALL' };
     let mseFilters = { search: '', priority: 'ALL', client: 'ALL', service: 'ALL', impact: 'ALL' };
@@ -961,7 +1052,7 @@
 
     function saveLocalFallback() {
       try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appData));
+        safeStorageSet(LOCAL_STORAGE_KEY, JSON.stringify(appData));
       } catch (err) {
         console.warn('Local storage save skipped:', err);
       }
@@ -969,7 +1060,7 @@
 
     function loadLocalFallback() {
       try {
-        const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+        const raw = safeStorageGet(LOCAL_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && Array.isArray(parsed.tickets) && Array.isArray(parsed.handovers)) {
@@ -1064,6 +1155,11 @@
           tier2: Number(items.tier2) || 0,
           mse: Number(items.mse) || 0,
         };
+      } else if (collectionName === 'adminConfig' && items && typeof items === 'object') {
+        if (items.passwordHash && items.passwordHash.length === 64) {
+          setAdminPasswordHashLocal(items.passwordHash);
+        }
+        return;
       }
 
       saveLocalFallback();
@@ -1251,101 +1347,103 @@
     function populateEquipmentDatalist() {
       const dl = document.getElementById('equipment-datalist');
       if (!dl) return;
-      const stats = getEquipmentStats();
-      dl.innerHTML = stats.map((e) => `<option value="${escapeHtml(e.label)}"></option>`).join('');
+      const items = getEquipmentStats();
+      dl.innerHTML = items.map((eq) => `<option value="${escapeHtml(eq.label)}"></option>`).join('');
+    }
+
+    function priorityBadge(priority) {
+      const map = {
+        'P1 - Critical': 'bg-red-600 text-white border-red-500',
+        'P2 - High': 'bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-500/40',
+        'P3 - Medium': 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/35',
+        'P4 - Low': 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+      };
+      return `<span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border ${map[priority] || 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700'}">${escapeHtml(priority || 'P3 - Medium')}</span>`;
+    }
+
+    function statusBadge(status) {
+      const map = {
+        'New': 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/35',
+        'Assigned': 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/35',
+        'In Progress': 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/35',
+        'Waiting': 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/35',
+        'Resolved': 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35',
+        'Closed': 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700',
+      };
+      return `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold border ${map[status] || 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700'}">${escapeHtml(status || 'New')}</span>`;
+    }
+
+    function impactBadge(impact) {
+      if (!impact || impact === 'No Impact') {
+        return `<span class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400">No Impact</span>`;
+      }
+      if (impact === 'Minor Impact') {
+        return `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">Minor Impact</span>`;
+      }
+      if (impact === 'Off-air Risk') {
+        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/40"><i data-lucide="alert-triangle" class="w-3 h-3"></i>Off-air Risk</span>`;
+      }
+      return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-red-600 text-white shadow-sm"><i data-lucide="radio" class="w-3 h-3"></i>Off-air Event</span>`;
+    }
+
+    function tallyBorderColor(t) {
+      if (!isOpenStatus(t.status)) return 'border-l-slate-400 dark:border-l-slate-600';
+      if (t.onAirImpact === 'Off-air Event (Major Impact)' || t.priority === 'P1 - Critical') return 'border-l-red-600';
+      if (t.onAirImpact === 'Off-air Risk' || t.priority === 'P2 - High') return 'border-l-orange-500';
+      if (t.priority === 'P3 - Medium') return 'border-l-amber-400';
+      return 'border-l-emerald-500';
     }
 
     function suggestHandoverLevel(t) {
       if (!isOpenStatus(t.status)) return 'green';
-      if (t.priority === 'P1 - Critical' || t.onAirImpact === 'Off-air Event (Major Impact)' || t.onAirImpact === 'Off-air Risk') {
-        return 'red';
-      }
+      if (t.priority === 'P1 - Critical' || t.onAirImpact === 'Off-air Event (Major Impact)' || t.onAirImpact === 'Off-air Risk') return 'red';
       return 'amber';
     }
 
     function getRecentHandovers(limit = 3) {
-      return [...appData.handovers]
-        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-        .slice(0, limit);
+      const sorted = [...appData.handovers].sort(
+        (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+      return sorted.slice(0, limit);
     }
 
     function getLatestHandoverId() {
       const recent = getRecentHandovers(1);
-      return recent.length ? recent[0].id : null;
+      return recent.length ? recent[0].id : '';
     }
 
     function ensureHandoverExists() {
-      if (appData.handovers.length > 0) return getLatestHandoverId();
+      const latestId = getLatestHandoverId();
+      if (latestId) return latestId;
+      const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' });
+      const nowIso = new Date().toISOString();
       const newHo = {
         id: 'HO-SHIFT-' + Date.now(),
-        title: 'Shift Handover #1',
+        title: `${today} — Shift Handover`,
         shiftLabel: 'Day Shift → Night Shift',
         engineer: '',
         shiftSummary: '',
-        createdAt: new Date().toISOString(),
+        createdAt: nowIso,
       };
       appData.handovers.unshift(newHo);
       cloudSaveHandover(newHo);
       return newHo.id;
     }
 
-    function populateHandoverSelect(selectEl, selectedId) {
+    function populateHandoverSelect(selectEl, selectedId = '') {
       if (!selectEl) return;
       const recent = getRecentHandovers(3);
+      if (selectedId && !recent.some((h) => h.id === selectedId)) {
+        const existing = appData.handovers.find((h) => h.id === selectedId);
+        if (existing) recent.push(existing);
+      }
       if (recent.length === 0) {
-        selectEl.innerHTML = `<option value="">Auto-create Shift Handover #1</option>`;
+        selectEl.innerHTML = `<option value="">(Will create new Shift Handover)</option>`;
         return;
       }
-      const list = [...recent];
-      if (selectedId && !list.some((h) => h.id === selectedId)) {
-        const current = appData.handovers.find((h) => h.id === selectedId);
-        if (current) list.push(current);
-      }
-      selectEl.innerHTML = list
-        .map((h, idx) => `<option value="${escapeHtml(h.id)}" ${h.id === selectedId ? 'selected' : ''}>${idx === 0 ? '★ ' : ''}${escapeHtml(h.title)}</option>`)
+      selectEl.innerHTML = recent
+        .map((h) => `<option value="${escapeHtml(h.id)}" ${h.id === selectedId ? 'selected' : ''}>${escapeHtml(h.title)}</option>`)
         .join('');
-    }
-
-    function priorityBadge(p) {
-      const map = {
-        'P1 - Critical': 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40',
-        'P2 - High': 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/40',
-        'P3 - Medium': 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/35',
-        'P4 - Low': 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35',
-      };
-      return `<span class="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold border ${map[p] || 'bg-slate-500/15 text-slate-400 border-slate-500/30'}">${escapeHtml(p)}</span>`;
-    }
-
-    function statusBadge(s) {
-      const map = {
-        'New': 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30',
-        'Assigned': 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
-        'In Progress': 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/35',
-        'Waiting': 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/35',
-        'Resolved': 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35',
-        'Closed': 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30',
-      };
-      return `<span class="px-2 py-0.5 rounded-md text-[11px] font-semibold border ${map[s] || 'bg-slate-500/15 text-slate-400 border-slate-500/30'}">${escapeHtml(s)}</span>`;
-    }
-
-    function impactBadge(impact) {
-      if (impact === 'Off-air Event (Major Impact)') {
-        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-red-600 text-white shadow-sm"><i data-lucide="alert-octagon" class="w-3 h-3"></i>Off-air Event</span>`;
-      }
-      if (impact === 'Off-air Risk') {
-        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40"><i data-lucide="alert-triangle" class="w-3 h-3"></i>Off-air Risk</span>`;
-      }
-      if (impact === 'Minor Impact') {
-        return `<span class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300">Minor Impact</span>`;
-      }
-      return `<span class="px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-500 dark:text-slate-400">No Impact</span>`;
-    }
-
-    function tallyBorderColor(t) {
-      if (!isOpenStatus(t.status)) return 'border-l-slate-400 dark:border-l-slate-600';
-      if (t.onAirImpact === 'Off-air Event (Major Impact)' || t.priority === 'P1 - Critical') return 'border-l-red-500';
-      if (t.onAirImpact === 'Off-air Risk' || t.priority === 'P2 - High') return 'border-l-amber-500';
-      return 'border-l-blue-500';
     }
 
     function showToast(message, type = 'info') {
@@ -1354,31 +1452,61 @@
       const colors = {
         success: 'bg-emerald-600 text-white border-emerald-500',
         error: 'bg-red-600 text-white border-red-500',
-        info: 'bg-slate-800 dark:bg-slate-900 text-white border-slate-700',
+        info: 'bg-slate-900 dark:bg-slate-800 text-white border-slate-700',
       };
-      const el = document.createElement('div');
-      el.className = `pointer-events-auto px-4 py-2.5 rounded-xl text-xs font-semibold border shadow-xl flex items-center gap-2 transition-all duration-200 ${colors[type] || colors.info}`;
-      el.textContent = message;
-      container.appendChild(el);
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl text-xs font-semibold shadow-xl border transition-all duration-200 flex items-center gap-2 max-w-sm ${colors[type] || colors.info}`;
+      toast.textContent = message;
+      container.appendChild(toast);
       setTimeout(() => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(6px)';
-        setTimeout(() => el.remove(), 220);
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(6px)';
+        setTimeout(() => toast.remove(), 220);
       }, 3200);
     }
 
+    function copyToClipboard(text, successMsg) {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) {
+          showToast(successMsg || 'Copied to clipboard', 'success');
+          return;
+        }
+      } catch (err) {}
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => showToast(successMsg || 'Copied to clipboard', 'success'))
+          .catch(() => showToast('Could not access clipboard', 'error'));
+      } else {
+        showToast('Could not access clipboard', 'error');
+      }
+    }
+
     /********************************************************************
-     * 6. NAVIGATION & TOP-LEVEL RENDERING
+     * 6. NAVIGATION & TOP BAR STATE
      ********************************************************************/
     function navigateTo(view) {
       activeView = view;
-      if (view !== 'eng') isHandoverMaximised = false;
+      if (view !== 'eng') {
+        isHandoverMaximised = false;
+      }
       renderApp();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function setEngTab(tab) {
       activeEngTab = tab;
-      if (tab !== 'handover') isHandoverMaximised = false;
+      if (tab !== 'handover') {
+        isHandoverMaximised = false;
+      }
       renderApp();
     }
 
@@ -1393,18 +1521,18 @@
     }
 
     function updateNavBar() {
-      const mcrOpenCount = appData.tickets.filter((t) => t.tier === 'tier1' && isOpenStatus(t.status)).length;
-      const engOpenCount = appData.tickets.filter((t) => isTier2Ticket(t) && isOpenStatus(t.status)).length;
-      const mseOpenCount = appData.tickets.filter((t) => isMseTicket(t) && isOpenStatus(t.status)).length;
+      const mcrOpen = appData.tickets.filter((t) => t.tier === 'tier1' && isOpenStatus(t.status)).length;
+      const engOpen = appData.tickets.filter((t) => isTier2Ticket(t) && isOpenStatus(t.status)).length;
+      const mseOpen = appData.tickets.filter((t) => isMseTicket(t) && isOpenStatus(t.status)).length;
 
       const mcrBadge = document.getElementById('nav-badge-mcr');
       const engBadge = document.getElementById('nav-badge-eng');
       const mseBadge = document.getElementById('nav-badge-mse');
-      if (mcrBadge) mcrBadge.textContent = mcrOpenCount;
-      if (engBadge) engBadge.textContent = engOpenCount;
-      if (mseBadge) mseBadge.textContent = mseOpenCount;
+      if (mcrBadge) mcrBadge.textContent = mcrOpen;
+      if (engBadge) engBadge.textContent = engOpen;
+      if (mseBadge) mseBadge.textContent = mseOpen;
 
-      ['home', 'mcr', 'eng', 'mse'].forEach((id) => {
+      ['home', 'mcr', 'eng', 'mse', 'stats'].forEach((id) => {
         const btn = document.getElementById(`nav-btn-${id}`);
         if (!btn) return;
         const active = activeView === id;
@@ -1416,7 +1544,9 @@
                 ? 'bg-blue-600 text-white shadow-sm'
                 : id === 'mse'
                   ? 'bg-purple-600 text-white shadow-sm'
-                  : 'bg-white dark:bg-[#18233A] text-slate-900 dark:text-white shadow-sm';
+                  : id === 'stats'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-[#18233A] text-slate-900 dark:text-white shadow-sm';
           btn.className = `flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${accent}`;
         } else {
           btn.className = 'flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all whitespace-nowrap';
@@ -1442,8 +1572,10 @@
         main.innerHTML = renderMcrView();
       } else if (activeView === 'mse') {
         main.innerHTML = renderMseView();
+      } else if (activeView === 'stats') {
+        main.innerHTML = renderStatsView();
       } else if (activeView === 'admin') {
-        main.innerHTML = renderSysAdminView();
+        main.innerHTML = isAdminAuthenticated ? renderSysAdminView() : renderSysAdminLoginView();
       } else {
         main.innerHTML = renderEngView();
       }
@@ -1451,7 +1583,7 @@
     }
 
     /********************************************************************
-     * 7. HOME VIEW (DESK LAUNCHERS + OPERATIONS STATISTICS & EQUIPMENT)
+     * 7. HOME VIEW (CLEAN DESK LAUNCHERS) & DEDICATED STATISTICS VIEW
      ********************************************************************/
     function renderHomeView() {
       const mcrTickets = appData.tickets.filter((t) => t.tier === 'tier1');
@@ -1459,34 +1591,26 @@
       const mseTickets = appData.tickets.filter(isMseTicket);
 
       const mcrOpen = mcrTickets.filter((t) => isOpenStatus(t.status)).length;
-      const mcrDone = mcrTickets.filter((t) => !isOpenStatus(t.status)).length;
       const mcrEscalated = mcrTickets.filter((t) => isEscalatedTicket(t) && isOpenStatus(t.status)).length;
 
       const engOpen = engTickets.filter((t) => isOpenStatus(t.status)).length;
-      const engDone = engTickets.filter((t) => !isOpenStatus(t.status)).length;
       const engP1 = engTickets.filter((t) => isOpenStatus(t.status) && (t.priority === 'P1 - Critical' || t.onAirImpact === 'Off-air Event (Major Impact)')).length;
 
       const mseOpen = mseTickets.filter((t) => isOpenStatus(t.status)).length;
-      const mseDone = mseTickets.filter((t) => !isOpenStatus(t.status)).length;
       const mseEscalatedIn = appData.tickets.filter((t) => getEscalationTarget(t) === 'mse' && isOpenStatus(t.status)).length;
 
       const totalOpen = appData.tickets.filter((t) => isOpenStatus(t.status)).length;
       const totalCompleted = appData.tickets.filter((t) => !isOpenStatus(t.status)).length;
-      const totalEscalated = appData.tickets.filter(isEscalatedTicket).length;
-      const escalatedToEngTotal = appData.tickets.filter((t) => getEscalationTarget(t) === 'tier2').length;
-      const escalatedToMseTotal = appData.tickets.filter((t) => getEscalationTarget(t) === 'mse').length;
-
-      const equipmentStats = getEquipmentStats();
-      const maxEqCount = equipmentStats.length ? equipmentStats[0].total : 1;
+      const equipmentCount = getEquipmentStats().length;
 
       return `
-        <div class="max-w-6xl mx-auto py-4 sm:py-8 space-y-8">
-          <div class="text-center space-y-1.5">
+        <div class="max-w-5xl mx-auto py-8 sm:py-12 space-y-8">
+          <div class="text-center space-y-2">
             <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Broadcast Support Portal
             </h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">
-              Select your operational desk to manage tickets, escalations, and shift handovers.
+              Select an operational desk or open live statistics &amp; equipment tracking.
             </p>
           </div>
 
@@ -1494,7 +1618,7 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
             <!-- MCR (Tier 1) Card -->
             <button type="button" onclick="navigateTo('mcr')"
-              class="group text-left p-6 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-teal-500/70 dark:hover:border-teal-500/60 shadow-sm hover:shadow-xl hover:shadow-teal-500/10 transition-all flex flex-col justify-between min-h-[235px]">
+              class="group text-left p-6 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-teal-500/70 dark:hover:border-teal-500/60 shadow-sm hover:shadow-xl hover:shadow-teal-500/10 transition-all flex flex-col justify-between min-h-[245px]">
               <div class="space-y-3.5">
                 <div class="flex items-center justify-between">
                   <div class="w-11 h-11 rounded-2xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-600 dark:text-teal-400">
@@ -1534,7 +1658,7 @@
 
             <!-- Broadcast Engineering (Tier 2) Card -->
             <button type="button" onclick="navigateTo('eng')"
-              class="group text-left p-6 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-blue-500/70 dark:hover:border-blue-500/60 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all flex flex-col justify-between min-h-[235px]">
+              class="group text-left p-6 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-blue-500/70 dark:hover:border-blue-500/60 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all flex flex-col justify-between min-h-[245px]">
               <div class="space-y-3.5">
                 <div class="flex items-center justify-between">
                   <div class="w-11 h-11 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
@@ -1574,7 +1698,7 @@
 
             <!-- MSE (Media Services Engineering) Card -->
             <button type="button" onclick="navigateTo('mse')"
-              class="group text-left p-6 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-purple-500/70 dark:hover:border-purple-500/60 shadow-sm hover:shadow-xl hover:shadow-purple-500/10 transition-all flex flex-col justify-between min-h-[235px]">
+              class="group text-left p-6 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-purple-500/70 dark:hover:border-purple-500/60 shadow-sm hover:shadow-xl hover:shadow-purple-500/10 transition-all flex flex-col justify-between min-h-[245px]">
               <div class="space-y-3.5">
                 <div class="flex items-center justify-between">
                   <div class="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
@@ -1589,7 +1713,7 @@
                     MSE (Media Services)
                   </h2>
                   <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    Media Services Engineering desk. Record tickets and respond to those escalated directly from MCR.
+                    Media Services Engineering desk. Manage media workflows, encoders, and tickets escalated directly from MCR.
                   </p>
                 </div>
               </div>
@@ -1613,59 +1737,156 @@
             </button>
           </div>
 
-          <!-- ==================== OPERATIONS STATISTICS SECTION ==================== -->
-          <section class="space-y-4 pt-2">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div class="flex items-center gap-2">
-                <i data-lucide="bar-chart-3" class="w-5 h-5 text-blue-500"></i>
-                <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Operations Statistics</h2>
+          <!-- Compact Statistics Portal Banner -->
+          <button type="button" onclick="navigateTo('stats')"
+            class="group w-full text-left p-5 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-indigo-500/60 shadow-sm hover:shadow-lg hover:shadow-indigo-500/10 transition-all flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
               </div>
-              <span class="text-[11px] font-mono text-slate-400">${appData.tickets.length} total tickets logged</span>
-            </div>
-
-            <!-- Summary KPIs -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div class="p-4 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                  <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Open Tickets (All Teams)</div>
-                  <div class="text-2xl font-mono font-extrabold text-slate-900 dark:text-white mt-1">${totalOpen}</div>
-                </div>
-                <div class="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center">
-                  <i data-lucide="activity" class="w-5 h-5"></i>
-                </div>
-              </div>
-
-              <div class="p-4 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                  <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Completed Tickets</div>
-                  <div class="text-2xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">${totalCompleted}</div>
-                </div>
-                <div class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
-                  <i data-lucide="check-circle-2" class="w-5 h-5"></i>
-                </div>
-              </div>
-
-              <div class="p-4 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                  <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Escalated Tickets</div>
-                  <div class="text-2xl font-mono font-extrabold text-amber-500 mt-1">${totalEscalated}</div>
-                  <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${escalatedToEngTotal} to Broadcast Eng &bull; ${escalatedToMseTotal} to MSE</div>
-                </div>
-                <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center">
-                  <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
-                </div>
+              <div>
+                <h2 class="text-base font-bold text-slate-900 dark:text-white group-hover:text-indigo-500 transition-colors">
+                  Operations Statistics &amp; Equipment Tracker
+                </h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  Team performance, escalation metrics, client breakdown, and most reported kit counter.
+                </p>
               </div>
             </div>
+            <div class="flex items-center gap-4 text-xs">
+              <div class="hidden sm:flex items-center gap-3 font-mono text-[11px]">
+                <span class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"><strong>${totalOpen}</strong> open</span>
+                <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"><strong>${totalCompleted}</strong> completed</span>
+                <span class="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300"><strong>${equipmentCount}</strong> kit tracked</span>
+              </div>
+              <span class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-1 transition-transform">
+                View Statistics <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </span>
+            </div>
+          </button>
+        </div>
+      `;
+    }
 
-            <!-- Per-Team Breakdown & Most Reported Equipment -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              <!-- Team Performance Breakdown -->
-              <div class="lg:col-span-5 bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+    function renderStatsView() {
+      const mcrTickets = appData.tickets.filter((t) => t.tier === 'tier1');
+      const engTickets = appData.tickets.filter(isTier2Ticket);
+      const mseTickets = appData.tickets.filter(isMseTicket);
+
+      const mcrOpen = mcrTickets.filter((t) => isOpenStatus(t.status)).length;
+      const mcrDone = mcrTickets.filter((t) => !isOpenStatus(t.status)).length;
+      const engOpen = engTickets.filter((t) => isOpenStatus(t.status)).length;
+      const engDone = engTickets.filter((t) => !isOpenStatus(t.status)).length;
+      const mseOpen = mseTickets.filter((t) => isOpenStatus(t.status)).length;
+      const mseDone = mseTickets.filter((t) => !isOpenStatus(t.status)).length;
+
+      const totalOpen = appData.tickets.filter((t) => isOpenStatus(t.status)).length;
+      const totalCompleted = appData.tickets.filter((t) => !isOpenStatus(t.status)).length;
+      const totalEscalated = appData.tickets.filter(isEscalatedTicket).length;
+      const escalatedToEngTotal = appData.tickets.filter((t) => getEscalationTarget(t) === 'tier2').length;
+      const escalatedToMseTotal = appData.tickets.filter((t) => getEscalationTarget(t) === 'mse').length;
+      const activeCritical = appData.tickets.filter(
+        (t) => isOpenStatus(t.status) && (t.priority === 'P1 - Critical' || t.onAirImpact === 'Off-air Event (Major Impact)' || t.onAirImpact === 'Off-air Risk')
+      ).length;
+
+      const allEquipmentStats = getEquipmentStats();
+      const q = statsEquipmentSearch.trim().toLowerCase();
+      const visibleEquipmentStats = q
+        ? allEquipmentStats.filter((eq) => eq.label.toLowerCase().includes(q))
+        : allEquipmentStats;
+      const maxEqCount = allEquipmentStats.length ? allEquipmentStats[0].total : 1;
+
+      // Client breakdown
+      const clientCounts = {};
+      appData.tickets.forEach((t) => {
+        const c = t.client || 'Other';
+        clientCounts[c] = (clientCounts[c] || 0) + 1;
+      });
+      const topClients = Object.entries(clientCounts).sort((a, b) => b[1] - a[1]);
+      const maxClient = topClients.length ? topClients[0][1] : 1;
+
+      // Ticket Type breakdown
+      const typeRows = TICKET_TYPES.map((type) => ({
+        type,
+        open: appData.tickets.filter((t) => t.ticketType === type && isOpenStatus(t.status)).length,
+        done: appData.tickets.filter((t) => t.ticketType === type && !isOpenStatus(t.status)).length,
+      }));
+
+      return `
+        <div class="max-w-6xl mx-auto space-y-6">
+          <!-- Header Banner -->
+          <div class="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#11192B] p-5 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h1 class="text-lg font-bold text-slate-900 dark:text-white">Operations Statistics</h1>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">${appData.tickets.length} Total</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Live ticket metrics across MCR, Broadcast Engineering, MSE, clients, and reported equipment.</p>
+              </div>
+            </div>
+            <button type="button" onclick="exportTicketsCSV()"
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Export All Tickets CSV
+            </button>
+          </div>
+
+          <!-- Top KPI Cards -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="p-4 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Open Tickets</div>
+                <div class="text-2xl font-mono font-extrabold text-slate-900 dark:text-white mt-1">${totalOpen}</div>
+              </div>
+              <div class="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center">
+                <i data-lucide="activity" class="w-5 h-5"></i>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Completed</div>
+                <div class="text-2xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">${totalCompleted}</div>
+              </div>
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
+                <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Escalated</div>
+                <div class="text-2xl font-mono font-extrabold text-amber-500 mt-1">${totalEscalated}</div>
+                <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">${escalatedToEngTotal} Eng &bull; ${escalatedToMseTotal} MSE</div>
+              </div>
+              <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center">
+                <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Active P1 / Off-Air</div>
+                <div class="text-2xl font-mono font-extrabold ${activeCritical > 0 ? 'text-red-500' : 'text-slate-900 dark:text-white'} mt-1">${activeCritical}</div>
+              </div>
+              <div class="w-10 h-10 rounded-xl bg-red-500/15 text-red-500 flex items-center justify-center">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Team Breakdown & Reported Equipment Counter -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            <div class="lg:col-span-5 space-y-5">
+              <!-- Team Breakdown -->
+              <div class="bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
                 <div class="flex items-center justify-between">
-                  <h3 class="text-sm font-bold text-slate-900 dark:text-white">Tickets by Team</h3>
+                  <h2 class="text-sm font-bold text-slate-900 dark:text-white">Tickets by Team</h2>
                   <span class="text-[11px] text-slate-400">Open vs Completed</span>
                 </div>
-
                 <div class="space-y-3">
                   ${[
                     { label: 'MCR (Tier 1)', open: mcrOpen, done: mcrDone, dot: 'bg-teal-500', bar: 'bg-teal-500', view: 'mcr' },
@@ -1695,63 +1916,125 @@
                 </div>
               </div>
 
-              <!-- Most Reported Equipment Counter -->
-              <div class="lg:col-span-7 bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      <i data-lucide="cpu" class="w-4 h-4 text-amber-500"></i>
-                      Reported Equipment Counter
-                    </h3>
-                    <p class="text-[11px] text-slate-500 dark:text-slate-400">Ranked by report frequency (includes kit reported once). Click any equipment to view its tickets.</p>
-                  </div>
-                  <span class="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                    ${equipmentStats.length} tracked ${equipmentStats.length === 1 ? 'item' : 'items'}
-                  </span>
+              <!-- Breakdown by Ticket Type & Client -->
+              <div class="bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+                <h2 class="text-sm font-bold text-slate-900 dark:text-white">By Ticket Type</h2>
+                <div class="grid grid-cols-2 gap-2.5">
+                  ${typeRows.map((tr) => `
+                    <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800">
+                      <div class="text-xs font-semibold text-slate-700 dark:text-slate-200">${escapeHtml(tr.type)}</div>
+                      <div class="mt-1 flex items-center gap-2 font-mono text-[11px]">
+                        <span class="text-blue-600 dark:text-blue-400 font-bold">${tr.open} open</span>
+                        <span class="text-slate-400">/</span>
+                        <span class="text-emerald-600 dark:text-emerald-400">${tr.done} done</span>
+                      </div>
+                    </div>
+                  `).join('')}
                 </div>
 
-                ${equipmentStats.length === 0 ? `
-                  <div class="p-8 text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
-                    No equipment has been logged on tickets yet. Add an Equipment name (e.g., <span class="font-mono">SNP-21-04</span>) when creating a ticket.
-                  </div>
-                ` : `
-                  <div class="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-                    ${equipmentStats.map((eq, idx) => {
-                      const pct = Math.max(10, Math.round((eq.total / maxEqCount) * 100));
-                      const isHot = eq.total >= 3;
-                      const isRepeat = eq.total === 2;
-                      return `
-                        <button type="button" onclick="openEquipmentModal('${escapeHtml(eq.key)}')"
-                          class="w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] hover:bg-slate-100 dark:hover:bg-[#152038] border border-slate-200/80 dark:border-slate-800 transition-colors space-y-1.5">
-                          <div class="flex items-center justify-between gap-2">
-                            <div class="flex items-center gap-2 min-w-0">
-                              <span class="w-5 text-[11px] font-mono text-slate-400">#${idx + 1}</span>
-                              <span class="font-mono text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">${escapeHtml(eq.label)}</span>
-                              ${eq.open > 0 ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300">${eq.open} active</span>` : `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">all resolved</span>`}
-                            </div>
-                            <span class="px-2 py-0.5 rounded-md text-xs font-mono font-extrabold shrink-0 ${
-                              isHot
-                                ? 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/35'
-                                : isRepeat
-                                  ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/35'
-                                  : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
-                            }">
-                              ${eq.total}&times;
-                            </span>
+                <div class="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5">
+                  <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">Tickets by Client</h3>
+                  ${topClients.length === 0 ? `<div class="text-xs text-slate-400">No ticket data yet.</div>` : `
+                    <div class="space-y-2">
+                      ${topClients.map(([client, cnt]) => `
+                        <div class="space-y-1">
+                          <div class="flex items-center justify-between text-xs">
+                            <span class="font-semibold text-slate-700 dark:text-slate-200">${escapeHtml(client)}</span>
+                            <span class="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400">${cnt}</span>
                           </div>
                           <div class="h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                            <div class="h-full rounded-full ${isHot ? 'bg-red-500' : isRepeat ? 'bg-amber-500' : 'bg-blue-500'}" style="width: ${pct}%"></div>
+                            <div class="h-full bg-indigo-500 rounded-full" style="width: ${Math.max(8, Math.round((cnt / maxClient) * 100))}%"></div>
                           </div>
-                        </button>
-                      `;
-                    }).join('')}
-                  </div>
-                `}
+                        </div>
+                      `).join('')}
+                    </div>
+                  `}
+                </div>
               </div>
             </div>
-          </section>
+
+            <!-- Most Reported Equipment Counter -->
+            <div class="lg:col-span-7 bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="cpu" class="w-4 h-4 text-amber-500"></i>
+                    Reported Equipment Counter
+                  </h2>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">Ranked by report frequency (includes kit reported once). Click any equipment to inspect its tickets.</p>
+                </div>
+                <span class="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                  ${allEquipmentStats.length} tracked ${allEquipmentStats.length === 1 ? 'item' : 'items'}
+                </span>
+              </div>
+
+              <div class="relative">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+                <input id="stats-eq-search" data-search-input="true" type="text" value="${escapeHtml(statsEquipmentSearch)}"
+                  oninput="handleEquipmentStatsSearch(this.value)"
+                  placeholder="Filter equipment (e.g., SNP-21-04, Kahuna, EVS)..."
+                  class="w-full pl-8 pr-3 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
+              </div>
+
+              <div id="stats-equipment-list" class="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+                ${renderEquipmentStatsRows(visibleEquipmentStats, maxEqCount)}
+              </div>
+            </div>
+          </div>
         </div>
       `;
+    }
+
+    function renderEquipmentStatsRows(list, maxEqCount) {
+      if (!list.length) {
+        return `
+          <div class="p-8 text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+            ${statsEquipmentSearch.trim()
+              ? 'No equipment matches your filter.'
+              : 'No equipment has been logged on tickets yet. Add an Equipment name (e.g., <span class="font-mono">SNP-21-04</span>) when creating a ticket.'}
+          </div>
+        `;
+      }
+      return list.map((eq, idx) => {
+        const pct = Math.max(10, Math.round((eq.total / maxEqCount) * 100));
+        const isHot = eq.total >= 3;
+        const isRepeat = eq.total === 2;
+        return `
+          <button type="button" onclick="openEquipmentModal(decodeURIComponent('${encodeURIComponent(eq.key)}'))"
+            class="w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] hover:bg-slate-100 dark:hover:bg-[#152038] border border-slate-200/80 dark:border-slate-800 transition-colors space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="w-6 text-[11px] font-mono text-slate-400">#${idx + 1}</span>
+                <span class="font-mono text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">${escapeHtml(eq.label)}</span>
+                ${eq.open > 0 ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300">${eq.open} active</span>` : `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">all resolved</span>`}
+              </div>
+              <span class="px-2 py-0.5 rounded-md text-xs font-mono font-extrabold shrink-0 ${
+                isHot
+                  ? 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/35'
+                  : isRepeat
+                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/35'
+                    : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+              }">
+                ${eq.total}&times;
+              </span>
+            </div>
+            <div class="h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+              <div class="h-full rounded-full ${isHot ? 'bg-red-500' : isRepeat ? 'bg-amber-500' : 'bg-blue-500'}" style="width: ${pct}%"></div>
+            </div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function handleEquipmentStatsSearch(val) {
+      statsEquipmentSearch = val;
+      const listEl = document.getElementById('stats-equipment-list');
+      if (!listEl) return;
+      const all = getEquipmentStats();
+      const maxEq = all.length ? all[0].total : 1;
+      const q = val.trim().toLowerCase();
+      const filtered = q ? all.filter((eq) => eq.label.toLowerCase().includes(q)) : all;
+      listEl.innerHTML = renderEquipmentStatsRows(filtered, maxEq);
     }
 
     function openEquipmentModal(equipmentKey) {
@@ -2361,8 +2644,264 @@
     }
 
     /********************************************************************
-     * 9B. SYSADMIN MONITORING, DEBUGGING & DATABASE CONTROLS
+     * 9B. SYSADMIN PASSWORD GATE, API SETTINGS, MONITORING & CONTROLS
      ********************************************************************/
+    function renderSysAdminLoginView() {
+      return `
+        <div class="max-w-md mx-auto py-12 sm:py-20">
+          <div class="bg-white dark:bg-[#11192B] border border-rose-500/35 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-5 bg-rose-500/10 border-b border-rose-500/20 flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-rose-500/20 border border-rose-500/35 flex items-center justify-center text-rose-500 shrink-0">
+                <i data-lucide="shield-alert" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h1 class="text-base font-bold text-slate-900 dark:text-white">SysAdmin Authentication</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Protected console — enter password to continue.</p>
+              </div>
+            </div>
+            <form onsubmit="submitAdminLogin(event)" class="p-6 space-y-4">
+              <div>
+                <label for="admin-login-password" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">SysAdmin Password</label>
+                <input id="admin-login-password" type="password" required autocomplete="current-password" placeholder="Enter password..."
+                  class="w-full px-3.5 py-2.5 rounded-xl text-sm bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50" />
+              </div>
+              <div id="admin-login-error" class="hidden p-2.5 rounded-lg bg-red-500/15 border border-red-500/35 text-xs font-semibold text-red-600 dark:text-red-300">
+                Incorrect password. Please try again.
+              </div>
+              <div class="flex items-center justify-between gap-2 pt-1">
+                <button type="button" onclick="navigateTo('home')"
+                  class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300">
+                  Back to Home
+                </button>
+                <button type="submit"
+                  class="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm">
+                  <i data-lucide="unlock" class="w-3.5 h-3.5"></i> Unlock SysAdmin
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    function submitAdminLogin(e) {
+      e.preventDefault();
+      const input = document.getElementById('admin-login-password');
+      const errEl = document.getElementById('admin-login-error');
+      const entered = input ? input.value : '';
+      if (sha256Hex(entered) === getAdminPasswordHash()) {
+        isAdminAuthenticated = true;
+        logSystemEvent('success', 'SysAdmin console unlocked.');
+        renderApp();
+        showToast('SysAdmin unlocked', 'success');
+      } else {
+        if (errEl) errEl.classList.remove('hidden');
+        if (input) {
+          input.value = '';
+          input.focus();
+        }
+        logSystemEvent('warn', 'Failed SysAdmin login attempt.');
+      }
+    }
+
+    function lockSysAdmin() {
+      isAdminAuthenticated = false;
+      logSystemEvent('info', 'SysAdmin console locked.');
+      renderApp();
+      showToast('SysAdmin locked', 'info');
+    }
+
+    function submitChangeAdminPassword(e) {
+      e.preventDefault();
+      const cur = document.getElementById('admin-pw-current').value;
+      const next = document.getElementById('admin-pw-new').value;
+      const confirmPw = document.getElementById('admin-pw-confirm').value;
+
+      if (sha256Hex(cur) !== getAdminPasswordHash()) {
+        showToast('Current password is incorrect', 'error');
+        return;
+      }
+      if (!next || next.length < 4) {
+        showToast('New password must be at least 4 characters', 'error');
+        return;
+      }
+      if (next !== confirmPw) {
+        showToast('New passwords do not match', 'error');
+        return;
+      }
+
+      const newHash = sha256Hex(next);
+      setAdminPasswordHashLocal(newHash);
+      if (window.CloudSync && window.CloudSync.isReady()) {
+        window.CloudSync.saveDoc('meta', 'adminConfig', {
+          passwordHash: newHash,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      document.getElementById('admin-pw-current').value = '';
+      document.getElementById('admin-pw-new').value = '';
+      document.getElementById('admin-pw-confirm').value = '';
+      logSystemEvent('success', 'SysAdmin password updated (SHA-256 hash saved).');
+      showToast('SysAdmin password updated & hashed', 'success');
+    }
+
+    function parseFirebaseSnippetInput() {
+      const raw = (document.getElementById('fb-snippet-paste').value || '').trim();
+      if (!raw) {
+        showToast('Paste a Firebase config snippet first', 'info');
+        return;
+      }
+      const keys = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
+      let matched = 0;
+      keys.forEach((key) => {
+        const re = new RegExp(`["']?${key}["']?\\s*:\\s*["']([^"']+)["']`);
+        const m = raw.match(re);
+        if (m && m[1]) {
+          const el = document.getElementById(`fb-cfg-${key}`);
+          if (el) el.value = m[1].trim();
+          matched += 1;
+        }
+      });
+      if (matched > 0) {
+        document.getElementById('fb-snippet-paste').value = '';
+        showToast(`Parsed ${matched}/6 fields — click Save & Connect`, 'success');
+      } else {
+        showToast('Could not detect Firebase keys in snippet', 'error');
+      }
+    }
+
+    async function submitFirebaseConfigForm(e) {
+      e.preventDefault();
+      const cfg = {
+        apiKey: document.getElementById('fb-cfg-apiKey').value.trim(),
+        authDomain: document.getElementById('fb-cfg-authDomain').value.trim(),
+        projectId: document.getElementById('fb-cfg-projectId').value.trim(),
+        storageBucket: document.getElementById('fb-cfg-storageBucket').value.trim(),
+        messagingSenderId: document.getElementById('fb-cfg-messagingSenderId').value.trim(),
+        appId: document.getElementById('fb-cfg-appId').value.trim(),
+      };
+      if (!cfg.apiKey || !cfg.projectId || !cfg.appId) {
+        showToast('API Key, Project ID, and App ID are required', 'error');
+        return;
+      }
+      saveObfuscatedFirebaseConfig(cfg);
+      logSystemEvent('success', `Saved obfuscated Firebase config (fingerprint ${computeConfigFingerprint(cfg)}).`);
+
+      if (window.CloudSync && typeof window.CloudSync.reconnectWithConfig === 'function') {
+        await window.CloudSync.reconnectWithConfig(cfg);
+      }
+      renderApp();
+      showToast('API config saved (masked) & reconnecting...', 'success');
+    }
+
+    function copyProtectedFirebaseToken() {
+      const token = safeStorageGet(OBFUSCATED_FB_KEY);
+      if (!token) {
+        showToast('No saved API configuration to export', 'info');
+        return;
+      }
+      copyToClipboard(token, 'Copied protected config token to clipboard');
+    }
+
+    async function importProtectedFirebaseToken() {
+      const input = document.getElementById('fb-token-import');
+      const token = input ? input.value.trim() : '';
+      const decoded = decodeObfuscatedConfig(token);
+      if (!decoded) {
+        showToast('Invalid protected config token (must start with BSDCFG1:)', 'error');
+        return;
+      }
+      safeStorageSet(OBFUSCATED_FB_KEY, token);
+      input.value = '';
+      logSystemEvent('success', `Imported protected Firebase config token (${computeConfigFingerprint(decoded)}).`);
+      if (window.CloudSync && typeof window.CloudSync.reconnectWithConfig === 'function') {
+        await window.CloudSync.reconnectWithConfig(decoded);
+      }
+      renderApp();
+      showToast('Imported config token & connected', 'success');
+    }
+
+    async function clearSavedFirebaseConfig() {
+      safeStorageRemove(OBFUSCATED_FB_KEY);
+      if (window.CloudSync && typeof window.CloudSync.disconnectCloud === 'function') {
+        await window.CloudSync.disconnectCloud();
+      }
+      logSystemEvent('warn', 'Removed saved Firebase API configuration; reverted to Local Demo.');
+      renderApp();
+      showToast('Saved API settings cleared', 'info');
+    }
+
+    async function forceReconnectCloud() {
+      const saved = getSavedFirebaseConfig();
+      if (saved && window.CloudSync && typeof window.CloudSync.reconnectWithConfig === 'function') {
+        await window.CloudSync.reconnectWithConfig(saved);
+        renderApp();
+        showToast('Reconnected to Firebase Firestore', 'success');
+      } else {
+        showToast('No saved API settings found to reconnect', 'info');
+      }
+    }
+
+    function triggerJsonBackupImport() {
+      const inp = document.getElementById('admin-json-import-input');
+      if (inp) inp.click();
+    }
+
+    async function handleJsonBackupImport(event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = '';
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (!parsed || !Array.isArray(parsed.tickets) || !Array.isArray(parsed.handovers)) {
+          showToast('Invalid backup file format', 'error');
+          return;
+        }
+        appData = {
+          tickets: parsed.tickets,
+          handovers: parsed.handovers,
+          manualHandoverItems: Array.isArray(parsed.manualHandoverItems) ? parsed.manualHandoverItems : [],
+          counters: parsed.counters && typeof parsed.counters === 'object'
+            ? {
+                tier1: Number(parsed.counters.tier1) || 0,
+                tier2: Number(parsed.counters.tier2) || 0,
+                mse: Number(parsed.counters.mse) || 0,
+              }
+            : { tier1: 0, tier2: 0, mse: 0 },
+        };
+        saveLocalFallback();
+        if (window.CloudSync && window.CloudSync.isReady()) {
+          const writes = [];
+          appData.handovers.forEach((ho) => writes.push(window.CloudSync.saveDoc('handovers', ho.id, ho)));
+          appData.tickets.forEach((t) => writes.push(window.CloudSync.saveDoc('tickets', t.id, t)));
+          appData.manualHandoverItems.forEach((m) => writes.push(window.CloudSync.saveDoc('manualHandoverItems', m.id, m)));
+          writes.push(window.CloudSync.saveDoc('meta', 'counters', appData.counters));
+          await Promise.all(writes);
+        }
+        logSystemEvent('success', `Restored JSON backup (${appData.tickets.length} tickets, ${appData.handovers.length} handovers).`);
+        renderApp();
+        showToast(`Imported ${appData.tickets.length} tickets & ${appData.handovers.length} handovers`, 'success');
+      } catch (err) {
+        logSystemEvent('error', `JSON import failed: ${err.message}`);
+        showToast('Failed to parse JSON backup', 'error');
+      }
+    }
+
+    function purgeClosedTicketsAdmin() {
+      const closed = appData.tickets.filter((t) => !isOpenStatus(t.status));
+      if (closed.length === 0) {
+        showToast('No closed or resolved tickets to purge', 'info');
+        return;
+      }
+      closed.forEach((t) => cloudDeleteTicket(t.id));
+      appData.tickets = appData.tickets.filter((t) => isOpenStatus(t.status));
+      saveLocalFallback();
+      logSystemEvent('warn', `SysAdmin purged ${closed.length} closed/resolved ticket(s).`);
+      renderApp();
+      showToast(`Purged ${closed.length} closed/resolved ticket(s)`, 'success');
+    }
+
     function renderDebugLogRows() {
       if (debugLogs.length === 0) {
         return `<div class="text-xs text-slate-500 font-mono py-3 text-center">No events recorded yet in this session.</div>`;
@@ -2389,42 +2928,224 @@
     function renderSysAdminView() {
       let localKb = '0.0';
       try {
-        const raw = localStorage.getItem(LOCAL_STORAGE_KEY) || '';
+        const raw = safeStorageGet(LOCAL_STORAGE_KEY) || '';
         localKb = (new Blob([raw]).size / 1024).toFixed(1);
       } catch (e) {}
 
       const totalReplies = appData.tickets.reduce((sum, t) => sum + (Array.isArray(t.replies) ? t.replies.length : 0), 0);
       const lockedCount = appData.tickets.filter((t) => t.locked).length;
+      const closedCount = appData.tickets.filter((t) => !isOpenStatus(t.status)).length;
       const c = appData.counters || { tier1: 0, tier2: 0, mse: 0 };
+      const savedFbCfg = getSavedFirebaseConfig();
+      const usingDefaultPw = getAdminPasswordHash() === DEFAULT_ADMIN_HASH;
       const cloudInfo = window.CloudSync && typeof window.CloudSync.getDiagnostics === 'function'
         ? window.CloudSync.getDiagnostics()
         : { projectId: 'Not configured', mode: 'Local Only', authStatus: 'None', pathMode: 'LocalStorage' };
 
       return `
         <div class="max-w-6xl mx-auto space-y-6">
+          <input type="file" id="admin-json-import-input" accept=".json" class="hidden" onchange="handleJsonBackupImport(event)" />
+
           <!-- Header -->
           <div class="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#11192B] p-5 rounded-2xl border border-rose-500/30">
             <div class="flex items-center gap-3.5">
               <div class="w-11 h-11 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0">
-                <i data-lucide="shield" class="w-5 h-5"></i>
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
               </div>
               <div>
                 <div class="flex items-center gap-2">
                   <h1 class="text-lg font-bold text-slate-900 dark:text-white">SysAdmin Console</h1>
-                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30">Monitoring &amp; Debug</span>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">Authenticated</span>
                 </div>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Inspect live sync telemetry, database counters, JSON backups, and perform controlled resets.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage masked Firebase API settings, SysAdmin security, backups, counters, and live sync telemetry.</p>
               </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
+              <button type="button" onclick="triggerJsonBackupImport()"
+                class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                <i data-lucide="upload" class="w-3.5 h-3.5"></i> Import JSON
+              </button>
               <button type="button" onclick="exportFullJsonBackup()"
-                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-                <i data-lucide="file-json" class="w-3.5 h-3.5"></i> Export JSON Backup
+                class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                <i data-lucide="file-json" class="w-3.5 h-3.5"></i> Export JSON
               </button>
-              <button type="button" onclick="exportTicketsCSV()"
-                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white">
-                <i data-lucide="download" class="w-3.5 h-3.5"></i> Export All CSV
+              <button type="button" onclick="lockSysAdmin()"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm">
+                <i data-lucide="lock" class="w-3.5 h-3.5"></i> Lock SysAdmin
               </button>
+            </div>
+          </div>
+
+          ${usingDefaultPw ? `
+            <div class="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-200">
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500 shrink-0"></i>
+              <span>You are currently using the default SysAdmin password (<span class="font-mono font-bold">admin</span>). Update it below in <strong>SysAdmin Security</strong> before sharing your PoC link.</span>
+            </div>
+          ` : ''}
+
+          <!-- ==================== FIREBASE API SETTINGS & SECURITY ==================== -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <!-- Firebase API Configuration (Obfuscated & Masked) -->
+            <div class="lg:col-span-7 bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="key-round" class="w-4 h-4 text-amber-500"></i> Firebase API Settings (Hidden &amp; Masked)
+                  </h2>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">Configure Firebase right here instead of putting keys in your GitHub HTML file.</p>
+                </div>
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase ${savedFbCfg ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}">
+                  ${savedFbCfg ? 'Configured (Masked)' : 'Not Configured'}
+                </span>
+              </div>
+
+              ${savedFbCfg ? `
+                <!-- Masked Stored Config Overview -->
+                <div class="p-3.5 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/30 space-y-2.5">
+                  <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span class="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                      <i data-lucide="eye-off" class="w-3.5 h-3.5"></i> Stored Obfuscated Config Active
+                    </span>
+                    <span class="font-mono text-[10px] text-slate-500 dark:text-slate-400">SHA-256 Fingerprint: <strong>${computeConfigFingerprint(savedFbCfg)}</strong></span>
+                  </div>
+                  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono text-[11px]">
+                    <div class="p-2 rounded-lg bg-white/70 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800">
+                      <span class="text-[9px] text-slate-400 block">PROJECT ID</span>
+                      <span class="text-slate-800 dark:text-slate-200 truncate block">${escapeHtml(savedFbCfg.projectId)}</span>
+                    </div>
+                    <div class="p-2 rounded-lg bg-white/70 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800">
+                      <span class="text-[9px] text-slate-400 block">API KEY</span>
+                      <span class="text-slate-600 dark:text-slate-300">${maskSecretValue(savedFbCfg.apiKey, 4)}</span>
+                    </div>
+                    <div class="p-2 rounded-lg bg-white/70 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800">
+                      <span class="text-[9px] text-slate-400 block">APP ID</span>
+                      <span class="text-slate-600 dark:text-slate-300">${maskSecretValue(savedFbCfg.appId, 4)}</span>
+                    </div>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2 pt-1">
+                    <button type="button" onclick="copyProtectedFirebaseToken()"
+                      class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                      <i data-lucide="copy" class="w-3 h-3"></i> Copy Setup Token (for other PCs)
+                    </button>
+                    <button type="button" onclick="forceReconnectCloud()"
+                      class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-blue-600/15 hover:bg-blue-600/25 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                      <i data-lucide="refresh-cw" class="w-3 h-3"></i> Reconnect
+                    </button>
+                    <button type="button" onclick="clearSavedFirebaseConfig()"
+                      class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30 ml-auto">
+                      <i data-lucide="trash-2" class="w-3 h-3"></i> Clear Keys
+                    </button>
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Quick Snippet Paste Parser -->
+              <div class="space-y-1.5">
+                <label for="fb-snippet-paste" class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">Quick-Paste <span class="font-mono">firebaseConfig</span> Snippet (Auto-Fills Below)</label>
+                <div class="flex gap-2">
+                  <textarea id="fb-snippet-paste" rows="2" placeholder="Paste const firebaseConfig = { apiKey: ... }; directly from Firebase Console..."
+                    class="flex-1 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"></textarea>
+                  <button type="button" onclick="parseFirebaseSnippetInput()"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 shrink-0 self-start">
+                    Parse
+                  </button>
+                </div>
+              </div>
+
+              <!-- Masked Entry Form -->
+              <form onsubmit="submitFirebaseConfigForm(event)" class="space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label for="fb-cfg-apiKey" class="block text-[10px] font-mono uppercase text-slate-400 mb-1">apiKey *</label>
+                    <input id="fb-cfg-apiKey" type="password" required placeholder="AIzaSy..."
+                      class="w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label for="fb-cfg-projectId" class="block text-[10px] font-mono uppercase text-slate-400 mb-1">projectId *</label>
+                    <input id="fb-cfg-projectId" type="text" required placeholder="your-project-id"
+                      class="w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label for="fb-cfg-authDomain" class="block text-[10px] font-mono uppercase text-slate-400 mb-1">authDomain</label>
+                    <input id="fb-cfg-authDomain" type="text" placeholder="your-project.firebaseapp.com"
+                      class="w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label for="fb-cfg-storageBucket" class="block text-[10px] font-mono uppercase text-slate-400 mb-1">storageBucket</label>
+                    <input id="fb-cfg-storageBucket" type="text" placeholder="your-project.firebasestorage.app"
+                      class="w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label for="fb-cfg-messagingSenderId" class="block text-[10px] font-mono uppercase text-slate-400 mb-1">messagingSenderId</label>
+                    <input id="fb-cfg-messagingSenderId" type="password" placeholder="1234567890"
+                      class="w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label for="fb-cfg-appId" class="block text-[10px] font-mono uppercase text-slate-400 mb-1">appId *</label>
+                    <input id="fb-cfg-appId" type="password" required placeholder="1:123456:web:..."
+                      class="w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" />
+                  </div>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <div class="flex items-center gap-1.5 flex-1 min-w-[200px]">
+                    <input id="fb-token-import" type="password" placeholder="Or paste BSDCFG1:... setup token"
+                      class="flex-1 px-2.5 py-1.5 rounded-lg text-xs font-mono bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" />
+                    <button type="button" onclick="importProtectedFirebaseToken()"
+                      class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shrink-0">
+                      Import Token
+                    </button>
+                  </div>
+                  <button type="submit"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-sm">
+                    <i data-lucide="save" class="w-3.5 h-3.5"></i> Save (Hide Keys) &amp; Connect
+                  </button>
+                </div>
+              </form>
+
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                <strong class="text-slate-700 dark:text-slate-200">Best-Practice Security Note:</strong> Keys saved here stay out of GitHub and are stored obfuscated &amp; masked. Because browsers must send the Firebase key when connecting, also restrict your API Key by <strong>HTTP Referrer</strong> (your <span class="font-mono">*.github.io</span> URL) in Google Cloud Console and tighten <strong>Firestore Rules</strong> before production.
+              </div>
+            </div>
+
+            <!-- SysAdmin Password Change (SHA-256) -->
+            <div class="lg:col-span-5 bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 flex flex-col justify-between">
+              <div class="space-y-4">
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="lock" class="w-4 h-4 text-rose-500"></i> SysAdmin Security
+                  </h2>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">Passwords are one-way hashed with SHA-256 and never saved in plain text.</p>
+                </div>
+
+                <form onsubmit="submitChangeAdminPassword(event)" class="space-y-3">
+                  <div>
+                    <label for="admin-pw-current" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Current Password</label>
+                    <input id="admin-pw-current" type="password" required placeholder="Current password..."
+                      class="w-full px-3 py-2 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label for="admin-pw-new" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">New Password</label>
+                    <input id="admin-pw-new" type="password" required minlength="4" placeholder="At least 4 characters..."
+                      class="w-full px-3 py-2 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label for="admin-pw-confirm" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Confirm New Password</label>
+                    <input id="admin-pw-confirm" type="password" required minlength="4" placeholder="Repeat new password..."
+                      class="w-full px-3 py-2 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" />
+                  </div>
+                  <button type="submit"
+                    class="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm">
+                    <i data-lucide="key" class="w-3.5 h-3.5"></i> Update SysAdmin Password
+                  </button>
+                </form>
+              </div>
+
+              <div class="pt-4 border-t border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-500 dark:text-slate-400 space-y-1">
+                <div>Stored SHA-256 Hash:</div>
+                <div class="p-2 rounded-lg bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800 break-all text-[10px]">
+                  ${escapeHtml(getAdminPasswordHash().slice(0, 24))}••••••••••••••••••••
+                </div>
+              </div>
             </div>
           </div>
 
@@ -2507,20 +3228,24 @@
                 <i data-lucide="wrench" class="w-4 h-4 text-sky-500"></i> Maintenance Utilities
               </h2>
               <p class="text-xs text-slate-500 dark:text-slate-400">
-                Useful tools for proof-of-concept testing, unlocking stuck records, or restoring sample data.
+                Housekeeping tools for resetting IDs, unlocking archived records, purging closed tickets, or restoring sample data.
               </p>
               <div class="flex flex-wrap gap-2.5 pt-1">
                 <button type="button" onclick="resetTicketCounters()"
                   class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/35">
                   <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset Ticket Count (001)
                 </button>
+                <button type="button" onclick="purgeClosedTicketsAdmin()"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-orange-500/15 hover:bg-orange-500/25 text-orange-700 dark:text-orange-300 border border-orange-500/35">
+                  <i data-lucide="archive-x" class="w-3.5 h-3.5"></i> Purge Closed (${closedCount})
+                </button>
                 <button type="button" onclick="reseedDemoDatabase()"
                   class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-300 border border-indigo-500/35">
-                  <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Load Demo Seed Data
+                  <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Load Demo Seed
                 </button>
                 <button type="button" onclick="unlockAllTicketsAdmin()"
                   class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-                  <i data-lucide="unlock" class="w-3.5 h-3.5"></i> Unlock All Locked Tickets
+                  <i data-lucide="unlock" class="w-3.5 h-3.5"></i> Unlock All
                 </button>
               </div>
             </div>
@@ -2796,7 +3521,7 @@
                         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200">
                         <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i> Maximise
                       </button>
-                      <button type="button" onclick="event.stopPropagation(); openDeleteModal('handover', '${escapeHtml(ho.id)}', '${escapeHtml(ho.title)}')" title="Delete Handover"
+                      <button type="button" onclick="event.stopPropagation(); openDeleteModal('handover', '${escapeHtml(ho.id)}')" title="Delete Handover"
                         class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-500/10">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                       </button>
@@ -3071,9 +3796,7 @@
         sectionText('green', '🟢 GREEN — COMPLETED THIS SHIFT'),
       ].filter((line) => line !== '').join('\n');
 
-      navigator.clipboard.writeText(text)
-        .then(() => showToast('Handover copied to clipboard', 'success'))
-        .catch(() => showToast('Could not access clipboard', 'error'));
+      copyToClipboard(text, 'Handover copied to clipboard');
     }
 
     /********************************************************************
@@ -3289,7 +4012,7 @@
                 <i data-lucide="pencil" class="w-4 h-4"></i>
               </button>
             ` : ''}
-            <button type="button" onclick="openDeleteModal('ticket', '${escapeHtml(t.id)}', '${escapeHtml(t.id)} — ${escapeHtml(t.title)}')" title="Delete ticket"
+            <button type="button" onclick="openDeleteModal('ticket', '${escapeHtml(t.id)}')" title="Delete ticket"
               class="p-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-red-500/15 text-slate-500 hover:text-red-500 border border-slate-200 dark:border-slate-700">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
@@ -3614,9 +4337,7 @@
         `Assigned To: ${t.assignedTo || 'Unassigned'} | Reporter: ${t.reporter || '—'}`,
         `Description: ${t.description || '—'}`,
       ].filter(Boolean).join('\n');
-      navigator.clipboard.writeText(summary)
-        .then(() => showToast(`Copied ${t.id} summary`, 'success'))
-        .catch(() => showToast('Clipboard unavailable', 'error'));
+      copyToClipboard(summary, `Copied ${t.id} summary`);
     }
 
     /********************************************************************
@@ -3960,7 +4681,19 @@
      ********************************************************************/
     function openDeleteModal(type, id, label) {
       deletingTarget = { type, id };
-      document.getElementById('delete-modal-msg').textContent = `Are you sure you want to permanently delete "${label}"? This cannot be undone.`;
+      let displayLabel = label;
+      if (!displayLabel) {
+        if (type === 'ticket') {
+          const t = appData.tickets.find((x) => x.id === id);
+          displayLabel = t ? `${t.id} — ${t.title}` : id;
+        } else if (type === 'handover') {
+          const ho = appData.handovers.find((x) => x.id === id);
+          displayLabel = ho ? ho.title : id;
+        } else {
+          displayLabel = id;
+        }
+      }
+      document.getElementById('delete-modal-msg').textContent = `Are you sure you want to permanently delete "${displayLabel}"? This cannot be undone.`;
       document.getElementById('delete-modal').classList.remove('hidden');
       refreshIcons();
     }
@@ -4168,39 +4901,38 @@
     function bootstrapApp() {
       initTheme();
       appData = loadLocalFallback();
+      updateSyncStatusUI(
+        'setup',
+        'Local Demo mode. Open SysAdmin (default password: admin) -> Firebase API Settings to connect live sync.'
+      );
       renderApp();
     }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', bootstrapApp);
-    } else {
-      bootstrapApp();
-    }
+    window.addEventListener('error', (ev) => {
+      if (ev && ev.message) {
+        logSystemEvent('error', `Runtime error: ${ev.message}`);
+      }
+    });
+
+    // Script is at the bottom of <body>, so run synchronously before the module script initializes CloudSync
+    bootstrapApp();
   </script>
 
   <!-- ==================== FIREBASE FIRESTORE REAL-TIME SYNC ==================== -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     /********************************************************************
-     * PASTE YOUR FIREBASE CONFIG BELOW (Step 6 from Firebase Console)
-     * Replace the 6 PASTE_YOUR_... values with your own keys,
-     * then commit this entire file as index.html on GitHub.
+     * API CONFIGURATION NOTE:
+     * You no longer need to paste API keys into this HTML file!
+     * Open SysAdmin (default password: admin) -> Firebase API Settings
+     * to enter & mask your Firebase config directly in the browser.
      ********************************************************************/
-    const USER_FIREBASE_CONFIG = {
-      apiKey: "AIzaSyCR5tyF9gbWewy0lOO2fHwqs6cX_ABFiUk",
-      authDomain: "bce-tickets-poc.firebaseapp.com",
-      projectId: "bce-tickets-poc",
-      storageBucket: "bce-tickets-poc.firebasestorage.app",
-      messagingSenderId: "1073019845237",
-	  appId: "1:1073019845237:web:795b05e6d1f931132b963c",
-	  measurementId: "G-KY0TTRPCCV"
-    };
-
     const DEFAULT_APP_ID = "broadcast-support-desk";
 
+    let fbApp = null;
     let db = null;
     let auth = null;
     let useArtifactPath = false;
@@ -4208,6 +4940,8 @@
     let activeUser = null;
     let externalTestModeAllowed = false;
     let activeProjectId = 'Not configured';
+    let unsubscribers = [];
+    let instanceCounter = 0;
 
     function isReady() {
       return Boolean(db && (activeUser || externalTestModeAllowed));
@@ -4300,7 +5034,7 @@
 
     function subscribeToCollection(collectionName) {
       if (!isReady()) return;
-      onSnapshot(
+      const unsub = onSnapshot(
         getColRef(collectionName),
         (snapshot) => {
           const rows = [];
@@ -4315,54 +5049,65 @@
           if (window.logSystemEvent) window.logSystemEvent('error', `Listener error (${collectionName}): ${err.message}`);
         }
       );
+      unsubscribers.push(unsub);
     }
 
-    function subscribeToCounters() {
+    function subscribeToMetaDocs() {
       if (!isReady()) return;
-      onSnapshot(
-        getDocRef('meta', 'counters'),
-        (snap) => {
-          if (snap.exists()) {
-            window.applyCloudSnapshot('counters', snap.data());
-          }
-        },
-        (err) => {
-          console.warn('Counters listener warning:', err);
-        }
+      unsubscribers.push(
+        onSnapshot(
+          getDocRef('meta', 'counters'),
+          (snap) => {
+            if (snap.exists()) window.applyCloudSnapshot('counters', snap.data());
+          },
+          (err) => console.warn('Counters listener warning:', err)
+        )
+      );
+      unsubscribers.push(
+        onSnapshot(
+          getDocRef('meta', 'adminConfig'),
+          (snap) => {
+            if (snap.exists()) window.applyCloudSnapshot('adminConfig', snap.data());
+          },
+          (err) => console.warn('Admin config listener warning:', err)
+        )
       );
     }
 
-    async function initCloudSync() {
-      const hasEnvConfig = typeof __firebase_config !== 'undefined' && Boolean(__firebase_config);
-      const hasUserConfig =
-        USER_FIREBASE_CONFIG &&
-        typeof USER_FIREBASE_CONFIG.projectId === 'string' &&
-        USER_FIREBASE_CONFIG.projectId.trim() !== '' &&
-        !USER_FIREBASE_CONFIG.projectId.startsWith('PASTE_YOUR_');
-
-      if (!hasEnvConfig && !hasUserConfig) {
-        window.updateSyncStatusUI(
-          'setup',
-          'Local Demo mode. Paste your firebaseConfig near the bottom of index.html to enable live multi-user sync.'
-        );
-        if (window.logSystemEvent) window.logSystemEvent('info', 'Running in Local Demo mode (no Firebase config detected).');
-        return;
+    async function disconnectCloud() {
+      unsubscribers.forEach((fn) => { try { fn(); } catch (e) {} });
+      unsubscribers = [];
+      db = null;
+      auth = null;
+      activeUser = null;
+      externalTestModeAllowed = false;
+      activeProjectId = 'Not configured';
+      if (fbApp) {
+        try { await deleteApp(fbApp); } catch (e) {}
+        fbApp = null;
       }
+      window.updateSyncStatusUI(
+        'setup',
+        'Local Demo mode. Open SysAdmin (default password: admin) -> Firebase API Settings to connect live sync.'
+      );
+    }
 
+    async function connectWithConfig(firebaseConfig, isEnvMode = false) {
+      await disconnectCloud();
       try {
-        useArtifactPath = hasEnvConfig;
-        const firebaseConfig = hasEnvConfig ? JSON.parse(__firebase_config) : USER_FIREBASE_CONFIG;
+        window.updateSyncStatusUI('connecting', `Connecting to ${firebaseConfig.projectId}...`);
+        useArtifactPath = isEnvMode;
         activeProjectId = firebaseConfig.projectId || 'Unknown';
         activeAppId =
-          hasEnvConfig && typeof __app_id !== 'undefined' && __app_id
+          isEnvMode && typeof __app_id !== 'undefined' && __app_id
             ? __app_id
             : DEFAULT_APP_ID;
 
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
+        fbApp = initializeApp(firebaseConfig, `bsd-sync-${++instanceCounter}`);
+        db = getFirestore(fbApp);
+        auth = getAuth(fbApp);
 
-        if (hasEnvConfig) {
+        if (isEnvMode) {
           if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             const cred = await signInWithCustomToken(auth, __initial_auth_token);
             activeUser = cred.user;
@@ -4385,7 +5130,7 @@
         subscribeToCollection('tickets');
         subscribeToCollection('handovers');
         subscribeToCollection('manualHandoverItems');
-        subscribeToCounters();
+        subscribeToMetaDocs();
 
         window.updateSyncStatusUI('live', `Connected to Firebase Firestore (${firebaseConfig.projectId})`);
         if (window.logSystemEvent) window.logSystemEvent('success', `Connected to Firebase Firestore (${firebaseConfig.projectId}).`);
@@ -4396,12 +5141,50 @@
       }
     }
 
+    async function reconnectWithConfig(firebaseConfig) {
+      await connectWithConfig(firebaseConfig, false);
+    }
+
+    async function initCloudSync() {
+      const hasEnvConfig = typeof __firebase_config !== 'undefined' && Boolean(__firebase_config);
+      if (hasEnvConfig) {
+        try {
+          const parsedEnvCfg = typeof __firebase_config === 'string'
+            ? JSON.parse(__firebase_config)
+            : __firebase_config;
+          if (parsedEnvCfg && parsedEnvCfg.projectId && parsedEnvCfg.apiKey) {
+            await connectWithConfig(parsedEnvCfg, true);
+            return;
+          }
+        } catch (parseErr) {
+          console.warn('Could not parse injected Firebase config, falling back to local mode:', parseErr);
+        }
+      }
+
+      const savedUserConfig = typeof window.getSavedFirebaseConfig === 'function'
+        ? window.getSavedFirebaseConfig()
+        : null;
+
+      if (savedUserConfig && savedUserConfig.projectId && savedUserConfig.apiKey) {
+        await connectWithConfig(savedUserConfig, false);
+        return;
+      }
+
+      window.updateSyncStatusUI(
+        'setup',
+        'Local Demo mode. Open SysAdmin (default password: admin) -> Firebase API Settings to connect live sync.'
+      );
+      if (window.logSystemEvent) window.logSystemEvent('info', 'Running in Local Demo mode (configure Firebase in SysAdmin).');
+    }
+
     window.CloudSync = {
       isReady,
       saveDoc,
       deleteDocById,
       clearAllCloudData,
       getDiagnostics,
+      reconnectWithConfig,
+      disconnectCloud,
     };
 
     initCloudSync();
