@@ -47,29 +47,35 @@
               Broadcast Support Desk
             </div>
             <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-              MCR (Tier 1) &amp; Broadcast Engineering (Tier 2)
+              MCR (Tier 1) &bull; Broadcast Engineering (Tier 2) &bull; MSE
             </div>
           </div>
         </button>
 
         <!-- Primary Navigation Tabs -->
-        <nav class="flex items-center gap-1 bg-slate-100 dark:bg-[#0A0F1C] p-1 rounded-xl border border-slate-200 dark:border-slate-800 order-3 lg:order-2 w-full lg:w-auto justify-center">
+        <nav class="flex items-center gap-1 bg-slate-100 dark:bg-[#0A0F1C] p-1 rounded-xl border border-slate-200 dark:border-slate-800 order-3 lg:order-2 w-full lg:w-auto justify-center overflow-x-auto">
           <button type="button" id="nav-btn-home" onclick="navigateTo('home')"
-            class="flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all">
+            class="flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap">
             <i data-lucide="home" class="w-3.5 h-3.5"></i>
             <span>Home</span>
           </button>
           <button type="button" id="nav-btn-mcr" onclick="navigateTo('mcr')"
-            class="flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all">
+            class="flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap">
             <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
             <span>MCR (Tier 1)</span>
             <span id="nav-badge-mcr" class="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-teal-500/20 text-teal-700 dark:text-teal-300">0</span>
           </button>
           <button type="button" id="nav-btn-eng" onclick="navigateTo('eng')"
-            class="flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all">
+            class="flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap">
             <i data-lucide="wrench" class="w-3.5 h-3.5"></i>
-            <span>Broadcast Engineering</span>
+            <span>Broadcast Eng</span>
             <span id="nav-badge-eng" class="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/20 text-blue-700 dark:text-blue-300">0</span>
+          </button>
+          <button type="button" id="nav-btn-mse" onclick="navigateTo('mse')"
+            class="flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap">
+            <i data-lucide="server" class="w-3.5 h-3.5"></i>
+            <span>MSE</span>
+            <span id="nav-badge-mse" class="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-purple-500/20 text-purple-700 dark:text-purple-300">0</span>
           </button>
         </nav>
 
@@ -82,16 +88,16 @@
             <span id="sync-status-text" class="hidden sm:inline">Connecting...</span>
           </button>
 
+          <button type="button" id="nav-btn-admin" onclick="navigateTo('admin')" title="SysAdmin Diagnostics & Controls"
+            class="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors">
+            <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+            <span class="hidden xl:inline">SysAdmin</span>
+          </button>
+
           <button type="button" onclick="openTicketModal(null)"
             class="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm shadow-blue-600/20 transition-colors">
             <i data-lucide="plus" class="w-3.5 h-3.5"></i>
             <span>New Ticket</span>
-          </button>
-
-          <button type="button" onclick="exportTicketsCSV()" title="Export all tickets to CSV"
-            class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i>
-            <span class="hidden sm:inline">CSV</span>
           </button>
 
           <button type="button" onclick="toggleTheme()" title="Toggle Dark / Light Mode"
@@ -127,10 +133,10 @@
 
       <form id="ticket-form" onsubmit="submitTicketForm(event)" class="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
         <!-- Tier Selector (Only when creating new) -->
-        <div id="tf-tier-wrap" class="grid grid-cols-2 gap-2.5">
+        <div id="tf-tier-wrap" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <label class="cursor-pointer">
             <input type="radio" name="tf-tier" value="tier1" class="peer sr-only" />
-            <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 peer-checked:border-teal-500 peer-checked:bg-teal-500/10 transition-all">
+            <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 peer-checked:border-teal-500 peer-checked:bg-teal-500/10 transition-all h-full">
               <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-teal-500"></span> MCR (Tier 1)
               </div>
@@ -139,11 +145,20 @@
           </label>
           <label class="cursor-pointer">
             <input type="radio" name="tf-tier" value="tier2" class="peer sr-only" checked />
-            <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 transition-all">
+            <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 transition-all h-full">
               <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-blue-500"></span> Broadcast Engineering (Tier 2)
+                <span class="w-2 h-2 rounded-full bg-blue-500"></span> Broadcast Eng (Tier 2)
               </div>
               <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Engineering fault-finding &amp; resolution</div>
+            </div>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="tf-tier" value="mse" class="peer sr-only" />
+            <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 peer-checked:border-purple-500 peer-checked:bg-purple-500/10 transition-all h-full">
+              <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-purple-500"></span> MSE
+              </div>
+              <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Media Services Engineering</div>
             </div>
           </label>
         </div>
@@ -163,7 +178,7 @@
           </div>
           <div>
             <label for="tf-type" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ticket Type</label>
-            <select id="tf-type" class="w-full px-3 py-2 rounded-lg text-sm bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"></select>
+            <select id="tf-type" onchange="handleModalTypeChange()" class="w-full px-3 py-2 rounded-lg text-sm bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"></select>
           </div>
           <div>
             <label for="tf-status" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Status</label>
@@ -182,8 +197,33 @@
             <select id="tf-impact" onchange="handleModalImpactChange()" class="w-full px-3 py-2 rounded-lg text-sm bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"></select>
           </div>
           <div>
-            <label for="tf-datetime" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Date and Time</label>
-            <input id="tf-datetime" type="datetime-local" required
+            <label for="tf-datetime" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Date &amp; Time</label>
+            <input id="tf-datetime" type="datetime-local"
+              class="w-full px-3 py-2 rounded-lg text-sm bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+          </div>
+        </div>
+
+        <!-- Location & Equipment (All Ticket Types) & Conditional Type-Specific Fields -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="tf-location" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Location</label>
+            <input id="tf-location" type="text" placeholder="e.g., Studio B, Gallery 2, CAR Rack 14, MCR Desk..."
+              class="w-full px-3 py-2 rounded-lg text-sm bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+          </div>
+          <div>
+            <label for="tf-equipment" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Equipment</label>
+            <input id="tf-equipment" type="text" list="equipment-datalist" placeholder="e.g., SNP-21-04, EVS-XT-03, Kahuna-G2..."
+              class="w-full px-3 py-2 rounded-lg text-sm bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+            <datalist id="equipment-datalist"></datalist>
+          </div>
+          <div id="tf-barcode-wrap" class="hidden">
+            <label id="tf-barcode-label" for="tf-barcode" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">ID / Barcode (if applicable)</label>
+            <input id="tf-barcode" type="text" placeholder="e.g., GM-EVS-0421 / Serial..."
+              class="w-full px-3 py-2 rounded-lg text-sm bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+          </div>
+          <div id="tf-cable-wrap" class="hidden">
+            <label for="tf-cable-type" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Cable Type</label>
+            <input id="tf-cable-type" type="text" placeholder="e.g., SDI / BNC, Fibre, Cat6A, XLR..."
               class="w-full px-3 py-2 rounded-lg text-sm bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
           </div>
         </div>
@@ -245,21 +285,21 @@
             <div>
               <label for="tf-handover-level" class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Traffic Light Priority</label>
               <select id="tf-handover-level" class="w-full px-2.5 py-1.5 rounded-lg text-xs bg-white dark:bg-[#11192B] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white">
-                <option value="red">RED — High Priority (Immediate Follow Up)</option>
-                <option value="amber">AMBER — Low/Med Priority (Requires Follow Up)</option>
-                <option value="green">GREEN — Completed (No Actions Needed)</option>
+                <option value="red">RED — Immediate Follow Up</option>
+                <option value="amber">AMBER — Requires Follow Up</option>
+                <option value="green">GREEN — Completed This Shift</option>
               </select>
             </div>
           </div>
         </div>
 
-        <!-- Submit Row -->
+        <!-- Form Actions -->
         <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
           <button type="button" onclick="closeTicketModal()"
-            class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200">
+            class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300">
             Cancel
           </button>
-          <button type="submit" id="tf-submit-btn"
+          <button id="tf-submit-btn" type="submit"
             class="px-5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm">
             Create Ticket
           </button>
@@ -268,13 +308,13 @@
     </div>
   </div>
 
-  <!-- ==================== ESCALATE TO TIER 2 MODAL ==================== -->
+  <!-- ==================== ESCALATE MODAL (BROADCAST ENG OR MSE) ==================== -->
   <div id="escalate-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
     <div class="w-full max-w-lg bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
       <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-amber-500/10">
         <div class="flex items-center gap-2">
           <i data-lucide="arrow-up-right" class="w-5 h-5 text-amber-500"></i>
-          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Escalate Ticket to Broadcast Engineering (Tier 2)</h3>
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Escalate MCR Ticket</h3>
         </div>
         <button type="button" onclick="closeEscalateModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-200">
           <i data-lucide="x" class="w-4 h-4"></i>
@@ -283,18 +323,41 @@
       <form onsubmit="submitEscalation(event)" class="p-5 space-y-4">
         <div id="esc-ticket-summary" class="p-3 rounded-xl bg-slate-100 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800 text-xs"></div>
         <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Escalate To Team <span class="text-red-500">*</span></label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <label class="cursor-pointer">
+              <input type="radio" name="esc-target" value="tier2" class="peer sr-only" checked />
+              <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 transition-all">
+                <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-blue-500"></span> Broadcast Engineering
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Tier 2 Broadcast Systems</div>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="esc-target" value="mse" class="peer sr-only" />
+              <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 peer-checked:border-purple-500 peer-checked:bg-purple-500/10 transition-all">
+                <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-purple-500"></span> MSE
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Media Services Engineering</div>
+              </div>
+            </label>
+          </div>
+        </div>
+        <div>
           <label for="esc-operator" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">MCR Operator Name <span class="text-red-500">*</span></label>
           <input id="esc-operator" type="text" required placeholder="Who is escalating from MCR?"
             class="w-full px-3 py-2 rounded-lg text-sm bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" />
         </div>
         <div>
           <label for="esc-reason" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Diagnostics &amp; Escalation Reason <span class="text-red-500">*</span></label>
-          <textarea id="esc-reason" rows="3" required placeholder="What first-line checks has MCR performed? Why does Tier 2 need to step in?"
+          <textarea id="esc-reason" rows="3" required placeholder="What first-line checks has MCR performed? Why does Engineering / MSE need to step in?"
             class="w-full px-3 py-2 rounded-lg text-sm bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"></textarea>
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeEscalateModal()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">Cancel</button>
-          <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white">Escalate to Tier 2</button>
+          <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white">Escalate Ticket</button>
         </div>
       </form>
     </div>
@@ -436,6 +499,57 @@
     </div>
   </div>
 
+  <!-- ==================== SYSADMIN CLEAR DATABASE ("ARE YOU SURE?") MODAL ==================== -->
+  <div id="clear-db-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="w-full max-w-md bg-white dark:bg-[#11192B] border-2 border-red-500/60 rounded-2xl shadow-2xl overflow-hidden">
+      <div class="px-5 py-4 bg-red-600 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="alert-octagon" class="w-5 h-5"></i>
+          <h3 class="text-sm font-extrabold uppercase tracking-wide">ARE YOU SURE?</h3>
+        </div>
+        <button type="button" onclick="closeClearDbModal()" class="p-1 rounded-lg hover:bg-white/20">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+          You are about to <strong>permanently wipe the entire database</strong> (including all tickets across MCR, Broadcast Engineering, and MSE, all Daily Handovers, manual notes, and ticket counters).
+        </p>
+        <div id="clear-db-summary" class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs font-mono text-red-700 dark:text-red-300"></div>
+        <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-800 cursor-pointer select-none">
+          <input id="clear-db-confirm-check" type="checkbox" onchange="toggleClearDbButton()"
+            class="mt-0.5 w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
+          <span class="text-xs font-semibold text-slate-800 dark:text-slate-200">
+            Yes, I understand this permanently deletes all records from local storage and Firebase Firestore, and resets ticket numbers back to 001.
+          </span>
+        </label>
+        <div class="flex justify-end gap-2 pt-1">
+          <button type="button" onclick="closeClearDbModal()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">Cancel</button>
+          <button type="button" id="clear-db-execute-btn" disabled onclick="executeClearDatabase()"
+            class="px-4 py-2 rounded-lg text-xs font-extrabold uppercase bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-sm">
+            ARE YOU SURE? — WIPE DATABASE
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== EQUIPMENT TICKETS DRILLDOWN MODAL ==================== -->
+  <div id="equipment-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+    <div class="w-full max-w-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-[#0E1526]">
+        <div>
+          <h3 id="eq-modal-title" class="text-sm font-bold text-slate-900 dark:text-white">Equipment History</h3>
+          <p id="eq-modal-sub" class="text-xs text-slate-500 dark:text-slate-400"></p>
+        </div>
+        <button type="button" onclick="closeEquipmentModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-200">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div id="eq-modal-body" class="p-5 overflow-y-auto space-y-2.5"></div>
+    </div>
+  </div>
+
   <!-- ==================== TOAST CONTAINER ==================== -->
   <div id="toast-container" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2 pointer-events-none"></div>
 
@@ -455,7 +569,6 @@
 
     const TICKET_TYPES = [
       'Incident',
-      'Request',
       'Handover Task',
       'Maintenance',
       'Change Request',
@@ -523,18 +636,21 @@
       tickets: [],
       handovers: [],
       manualHandoverItems: [],
+      counters: { tier1: 0, tier2: 0, mse: 0 },
     };
 
     // Navigation & View State
-    let activeView = 'home'; // 'home' | 'mcr' | 'eng'
+    let activeView = 'home'; // 'home' | 'mcr' | 'eng' | 'mse' | 'admin'
     let activeEngTab = 'tickets'; // 'tickets' | 'handover'
-    let activeEngSection = 'escalated'; // 'escalated' | TicketType | 'all' | 'closed'
+    let activeEngSection = 'all'; // 'all' | 'escalated' | TicketType | 'closed'
+    let activeMseSection = 'all'; // 'all' | 'escalated' | TicketType | 'closed'
     let activeHandoverId = null; // null = list view, string = opened handover sheet
     let isHandoverMaximised = false;
 
     // Filter State
     let mcrFilters = { search: '', status: 'ALL', priority: 'ALL', impact: 'ALL' };
     let engFilters = { search: '', priority: 'ALL', client: 'ALL', service: 'ALL', impact: 'ALL' };
+    let mseFilters = { search: '', priority: 'ALL', client: 'ALL', service: 'ALL', impact: 'ALL' };
 
     // Modal & Drawer Tracking
     let openDrawerTicketId = null;
@@ -544,11 +660,26 @@
     let modalSelectedServices = [];
     let isServicesDropdownOpen = false;
 
-    // Cloud Sync State
+    // Cloud Sync & SysAdmin Diagnostics State
     let syncState = 'connecting'; // 'connecting' | 'live' | 'setup' | 'error'
     let syncDetailMessage = 'Connecting to Firebase Firestore...';
+    let lastSyncTimestamp = null;
     let pendingCloudRender = false;
     const cloudDebounceTimers = {};
+    const debugLogs = [];
+
+    function logSystemEvent(level, message) {
+      debugLogs.unshift({
+        time: new Date().toISOString(),
+        level,
+        message,
+      });
+      if (debugLogs.length > 60) debugLogs.length = 60;
+      if (activeView === 'admin') {
+        const logContainer = document.getElementById('admin-debug-log');
+        if (logContainer) logContainer.innerHTML = renderDebugLogRows();
+      }
+    }
 
     /********************************************************************
      * 3. SAFE ICON HELPER & SEED DATA
@@ -572,13 +703,14 @@
       const hoPrevId = 'HO-SHIFT-DEMO-1';
 
       return {
+        counters: { tier1: 1, tier2: 3, mse: 1 },
         handovers: [
           {
             id: hoLatestId,
             title: 'Current Shift Handover',
             shiftLabel: 'Day Shift → Night Shift',
             engineer: '',
-            shiftSummary: 'EVS XT-VIA ingest drop on DAZN feed under active Tier 2 investigation. Routine Cerebrum NMOS routing checks complete.',
+            shiftSummary: 'SNP-21-04 ingest drop on DAZN feed under active Tier 2 investigation. Routine Cerebrum NMOS routing checks complete.',
             createdAt: isoAgo(1),
           },
           {
@@ -592,27 +724,33 @@
         ],
         tickets: [
           {
-            id: 'ENG-1002',
+            id: 'ENG-003',
             tier: 'tier2',
+            escalatedTo: 'tier2',
             escalatedToTier2: true,
+            escalatedToMse: false,
             escalatedBy: 'MCR Desk',
             escalatedAt: isoAgo(1.2),
-            escalationReason: 'Rebooted proxy & verified fibre light levels; intermittent audio/video glitch persists on EVS Ch 3.',
-            title: 'EVS XT-VIA Channel 3 intermittent drop during DAZN ingest',
+            escalationReason: 'Rebooted proxy & verified fibre light levels; intermittent video glitch persists on SNP-21-04.',
+            title: 'SNP-21-04 intermittent SDI drop during DAZN ingest',
             priority: 'P1 - Critical',
             ticketType: 'Incident',
             status: 'In Progress',
-            servicesAffected: ['EVS', 'Audio'],
+            servicesAffected: ['SNPs / GFs', 'EVS', 'Audio'],
             client: 'DAZN',
+            location: 'CAR Rack 14',
+            equipment: 'SNP-21-04',
+            assetBarcode: 'GM-SNP-2104',
+            cableType: '',
             dateTime: dtLocalAgo(1.5),
             onAirImpact: 'Off-air Risk',
             reporter: 'MCR Desk',
             assignedTo: '',
-            description: 'Channel 3 reporting brief SDI lock loss every ~15 minutes. Backup ingest channel engaged while Tier 2 inspects rear SFP and genlock feed.',
+            description: 'SNP-21-04 reporting brief lock loss every ~15 minutes. Backup ingest channel engaged while Tier 2 inspects rear SFP and genlock feed.',
             inHandover: true,
             handoverId: hoLatestId,
             handoverLevel: 'red',
-            handoverTitle: 'EVS XT-VIA Ch 3 intermittent drop (DAZN)',
+            handoverTitle: 'SNP-21-04 intermittent drop (DAZN)',
             handoverNotes: 'Backup channel live. Need to swap SFP module on port 3 after live window ends at 23:00.',
             handoverOwner: '',
             locked: false,
@@ -623,7 +761,7 @@
                 id: 'rep-seed-1',
                 author: 'MCR Desk',
                 category: 'Escalation',
-                message: 'Escalated to Tier 2: Verified fibre light levels and switched ingest to backup EVS channel.',
+                message: 'Escalated to Broadcast Engineering (Tier 2): Verified fibre light levels and switched ingest to backup channel.',
                 timestamp: isoAgo(1.2),
               },
               {
@@ -638,9 +776,11 @@
             updatedAt: isoAgo(0.7),
           },
           {
-            id: 'MCR-2001',
+            id: 'MCR-001',
             tier: 'tier1',
+            escalatedTo: '',
             escalatedToTier2: false,
+            escalatedToMse: false,
             escalatedBy: '',
             escalatedAt: null,
             escalationReason: '',
@@ -650,6 +790,10 @@
             status: 'New',
             servicesAffected: ['Comms', 'Studio'],
             client: 'TNT',
+            location: 'Studio B',
+            equipment: 'BOLERO-KP-04',
+            assetBarcode: 'GM-COM-0084',
+            cableType: '',
             dateTime: dtLocalAgo(0.8),
             onAirImpact: 'Minor Impact',
             reporter: 'Studio B Floor',
@@ -669,9 +813,48 @@
             updatedAt: isoAgo(0.8),
           },
           {
-            id: 'ENG-1001',
-            tier: 'tier2',
+            id: 'MSE-001',
+            tier: 'mse',
+            escalatedTo: '',
             escalatedToTier2: false,
+            escalatedToMse: false,
+            escalatedBy: '',
+            escalatedAt: null,
+            escalationReason: '',
+            title: 'Vmix media ingest encoder dropping frames on Netflix live feed',
+            priority: 'P2 - High',
+            ticketType: 'Incident',
+            status: 'Assigned',
+            servicesAffected: ['Vmix', 'Networking'],
+            client: 'Netflix',
+            location: 'MSE Suite 3',
+            equipment: 'VMIX-ENC-03',
+            assetBarcode: 'GM-VMX-0031',
+            cableType: '',
+            dateTime: dtLocalAgo(2.2),
+            onAirImpact: 'Minor Impact',
+            reporter: 'Media Ops',
+            assignedTo: '',
+            description: 'Encoder GPU utilisation spiking on NDI input 2 during 1080p50 capture.',
+            inHandover: false,
+            handoverId: '',
+            handoverLevel: 'amber',
+            handoverTitle: '',
+            handoverNotes: '',
+            handoverOwner: '',
+            locked: false,
+            lockedAt: null,
+            lockedBy: '',
+            replies: [],
+            createdAt: isoAgo(2.2),
+            updatedAt: isoAgo(2.2),
+          },
+          {
+            id: 'ENG-002',
+            tier: 'tier2',
+            escalatedTo: '',
+            escalatedToTier2: false,
+            escalatedToMse: false,
             escalatedBy: '',
             escalatedAt: null,
             escalationReason: '',
@@ -681,6 +864,10 @@
             status: 'Assigned',
             servicesAffected: ['Kahuna / Kula', 'Cerebrum'],
             client: 'UEFA',
+            location: 'Gallery 2',
+            equipment: 'KAHUNA-G2',
+            assetBarcode: '',
+            cableType: '',
             dateTime: dtLocalAgo(3),
             onAirImpact: 'No Impact',
             reporter: 'Tech Ops',
@@ -700,27 +887,33 @@
             updatedAt: isoAgo(2.5),
           },
           {
-            id: 'ENG-1000',
+            id: 'ENG-001',
             tier: 'tier2',
+            escalatedTo: '',
             escalatedToTier2: false,
+            escalatedToMse: false,
             escalatedBy: '',
             escalatedAt: null,
             escalationReason: '',
-            title: 'TXCore primary/backup failover drill completed cleanly',
+            title: 'SNP-21-04 routine primary/backup failover drill completed cleanly',
             priority: 'P4 - Low',
             ticketType: 'Maintenance',
             status: 'Resolved',
-            servicesAffected: ['TXCore', 'NMOS'],
+            servicesAffected: ['SNPs / GFs', 'TXCore', 'NMOS'],
             client: 'ITV',
+            location: 'CAR Rack 14',
+            equipment: 'SNP-21-04',
+            assetBarcode: 'GM-SNP-2104',
+            cableType: 'Single-mode Fibre (LC)',
             dateTime: dtLocalAgo(16),
             onAirImpact: 'No Impact',
             reporter: 'Broadcast Eng',
             assignedTo: '',
-            description: 'Scheduled failover test between Primary and Backup TXCore nodes.',
+            description: 'Scheduled failover test on SNP-21-04 between Primary and Backup TXCore nodes.',
             inHandover: true,
             handoverId: hoLatestId,
             handoverLevel: 'green',
-            handoverTitle: 'TXCore primary/backup failover test (ITV)',
+            handoverTitle: 'SNP-21-04 failover drill (ITV)',
             handoverNotes: 'Clean switchover verified with zero frame drops. Returned to normal primary path.',
             handoverOwner: '',
             locked: true,
@@ -730,7 +923,7 @@
               {
                 id: 'rep-seed-3',
                 author: 'Engineering',
-                category: 'Resolved',
+                category: 'Resolution',
                 message: 'Failover and failback confirmed clean. Ticket resolved.',
                 timestamp: isoAgo(15),
               },
@@ -784,6 +977,13 @@
               tickets: parsed.tickets,
               handovers: parsed.handovers,
               manualHandoverItems: Array.isArray(parsed.manualHandoverItems) ? parsed.manualHandoverItems : [],
+              counters: parsed.counters && typeof parsed.counters === 'object'
+                ? {
+                    tier1: Number(parsed.counters.tier1) || 0,
+                    tier2: Number(parsed.counters.tier2) || 0,
+                    mse: Number(parsed.counters.mse) || 0,
+                  }
+                : { tier1: 0, tier2: 0, mse: 0 },
             };
           }
         }
@@ -841,7 +1041,13 @@
       return Boolean(el && el.dataset && el.dataset.hoInline === 'true');
     }
 
+    function isUserTypingSearch() {
+      const el = document.activeElement;
+      return Boolean(el && el.dataset && el.dataset.searchInput === 'true');
+    }
+
     function applyCloudSnapshot(collectionName, items) {
+      lastSyncTimestamp = new Date().toISOString();
       if (collectionName === 'tickets') {
         appData.tickets = sortTicketsOperational(items);
       } else if (collectionName === 'handovers') {
@@ -852,11 +1058,24 @@
         appData.manualHandoverItems = [...items].sort(
           (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
         );
+      } else if (collectionName === 'counters' && items && typeof items === 'object') {
+        appData.counters = {
+          tier1: Number(items.tier1) || 0,
+          tier2: Number(items.tier2) || 0,
+          mse: Number(items.mse) || 0,
+        };
       }
+
+      saveLocalFallback();
 
       if (isUserTypingInlineHandover()) {
         pendingCloudRender = true;
         updateNavBar();
+      } else if (isUserTypingSearch()) {
+        updateNavBar();
+        if (activeView === 'mcr') updateFilteredTicketList('mcr');
+        else if (activeView === 'eng') updateFilteredTicketList('eng');
+        else if (activeView === 'mse') updateFilteredTicketList('mse');
       } else {
         renderApp();
       }
@@ -920,6 +1139,12 @@
       window.CloudSync.deleteDocById('manualHandoverItems', id);
     }
 
+    function cloudSaveCounters() {
+      saveLocalFallback();
+      if (!window.CloudSync || !window.CloudSync.isReady()) return;
+      window.CloudSync.saveDoc('meta', 'counters', appData.counters);
+    }
+
     /********************************************************************
      * 5. UTILITIES & BADGE HELPERS
      ********************************************************************/
@@ -955,7 +1180,21 @@
     }
 
     function isTier2Ticket(t) {
-      return t.tier === 'tier2' || Boolean(t.escalatedToTier2);
+      return t.tier === 'tier2' || t.escalatedTo === 'tier2' || Boolean(t.escalatedToTier2);
+    }
+
+    function isMseTicket(t) {
+      return t.tier === 'mse' || t.escalatedTo === 'mse' || Boolean(t.escalatedToMse);
+    }
+
+    function isEscalatedTicket(t) {
+      return Boolean(t.escalatedTo || t.escalatedToTier2 || t.escalatedToMse);
+    }
+
+    function getEscalationTarget(t) {
+      if (t.escalatedTo === 'mse' || t.escalatedToMse) return 'mse';
+      if (t.escalatedTo === 'tier2' || t.escalatedToTier2) return 'tier2';
+      return '';
     }
 
     function sortTicketsOperational(list) {
@@ -967,10 +1206,53 @@
     }
 
     function generateTicketId(tier) {
-      const prefix = tier === 'tier1' ? 'MCR' : 'ENG';
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      const id = `${prefix}-${rand}`;
-      return appData.tickets.some((t) => t.id === id) ? `${prefix}-${Date.now().toString().slice(-4)}` : id;
+      const key = tier === 'tier1' ? 'tier1' : tier === 'mse' ? 'mse' : 'tier2';
+      const prefix = key === 'tier1' ? 'MCR' : key === 'mse' ? 'MSE' : 'ENG';
+      if (!appData.counters || typeof appData.counters !== 'object') {
+        appData.counters = { tier1: 0, tier2: 0, mse: 0 };
+      }
+      let nextNum = (Number(appData.counters[key]) || 0) + 1;
+      let candidate = `${prefix}-${String(nextNum).padStart(3, '0')}`;
+      // Safeguard if counter was reset while old tickets still exist
+      while (appData.tickets.some((t) => t.id === candidate)) {
+        nextNum += 1;
+        candidate = `${prefix}-${String(nextNum).padStart(3, '0')}`;
+      }
+      appData.counters[key] = nextNum;
+      cloudSaveCounters();
+      return candidate;
+    }
+
+    function getEquipmentStats() {
+      const map = new Map();
+      appData.tickets.forEach((t) => {
+        const raw = (t.equipment || '').trim();
+        if (!raw) return;
+        const norm = raw.toUpperCase();
+        if (!map.has(norm)) {
+          map.set(norm, {
+            key: norm,
+            label: raw,
+            total: 0,
+            open: 0,
+            closed: 0,
+            tickets: [],
+          });
+        }
+        const entry = map.get(norm);
+        entry.total += 1;
+        if (isOpenStatus(t.status)) entry.open += 1;
+        else entry.closed += 1;
+        entry.tickets.push(t);
+      });
+      return [...map.values()].sort((a, b) => b.total - a.total || b.open - a.open || a.label.localeCompare(b.label));
+    }
+
+    function populateEquipmentDatalist() {
+      const dl = document.getElementById('equipment-datalist');
+      if (!dl) return;
+      const stats = getEquipmentStats();
+      dl.innerHTML = stats.map((e) => `<option value="${escapeHtml(e.label)}"></option>`).join('');
     }
 
     function suggestHandoverLevel(t) {
@@ -1105,16 +1387,24 @@
       renderApp();
     }
 
+    function setMseSection(section) {
+      activeMseSection = section;
+      renderApp();
+    }
+
     function updateNavBar() {
       const mcrOpenCount = appData.tickets.filter((t) => t.tier === 'tier1' && isOpenStatus(t.status)).length;
       const engOpenCount = appData.tickets.filter((t) => isTier2Ticket(t) && isOpenStatus(t.status)).length;
+      const mseOpenCount = appData.tickets.filter((t) => isMseTicket(t) && isOpenStatus(t.status)).length;
 
       const mcrBadge = document.getElementById('nav-badge-mcr');
       const engBadge = document.getElementById('nav-badge-eng');
+      const mseBadge = document.getElementById('nav-badge-mse');
       if (mcrBadge) mcrBadge.textContent = mcrOpenCount;
       if (engBadge) engBadge.textContent = engOpenCount;
+      if (mseBadge) mseBadge.textContent = mseOpenCount;
 
-      ['home', 'mcr', 'eng'].forEach((id) => {
+      ['home', 'mcr', 'eng', 'mse'].forEach((id) => {
         const btn = document.getElementById(`nav-btn-${id}`);
         if (!btn) return;
         const active = activeView === id;
@@ -1124,12 +1414,21 @@
               ? 'bg-teal-600 text-white shadow-sm'
               : id === 'eng'
                 ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-white dark:bg-[#18233A] text-slate-900 dark:text-white shadow-sm';
-          btn.className = `flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${accent}`;
+                : id === 'mse'
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'bg-white dark:bg-[#18233A] text-slate-900 dark:text-white shadow-sm';
+          btn.className = `flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${accent}`;
         } else {
-          btn.className = 'flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all';
+          btn.className = 'flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all whitespace-nowrap';
         }
       });
+
+      const adminBtn = document.getElementById('nav-btn-admin');
+      if (adminBtn) {
+        adminBtn.className = activeView === 'admin'
+          ? 'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-semibold bg-rose-600 text-white border border-rose-500 shadow-sm transition-colors'
+          : 'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors';
+      }
     }
 
     function renderApp() {
@@ -1141,6 +1440,10 @@
         main.innerHTML = renderHomeView();
       } else if (activeView === 'mcr') {
         main.innerHTML = renderMcrView();
+      } else if (activeView === 'mse') {
+        main.innerHTML = renderMseView();
+      } else if (activeView === 'admin') {
+        main.innerHTML = renderSysAdminView();
       } else {
         main.innerHTML = renderEngView();
       }
@@ -1148,17 +1451,37 @@
     }
 
     /********************************************************************
-     * 7. HOME VIEW (CLEAN TWO-CARD LAUNCHER)
+     * 7. HOME VIEW (DESK LAUNCHERS + OPERATIONS STATISTICS & EQUIPMENT)
      ********************************************************************/
     function renderHomeView() {
-      const mcrOpen = appData.tickets.filter((t) => t.tier === 'tier1' && isOpenStatus(t.status)).length;
-      const mcrEscalated = appData.tickets.filter((t) => t.tier === 'tier1' && t.escalatedToTier2 && isOpenStatus(t.status)).length;
-      const engOpen = appData.tickets.filter((t) => isTier2Ticket(t) && isOpenStatus(t.status)).length;
-      const engP1 = appData.tickets.filter((t) => isTier2Ticket(t) && isOpenStatus(t.status) && (t.priority === 'P1 - Critical' || t.onAirImpact === 'Off-air Event (Major Impact)')).length;
+      const mcrTickets = appData.tickets.filter((t) => t.tier === 'tier1');
+      const engTickets = appData.tickets.filter(isTier2Ticket);
+      const mseTickets = appData.tickets.filter(isMseTicket);
+
+      const mcrOpen = mcrTickets.filter((t) => isOpenStatus(t.status)).length;
+      const mcrDone = mcrTickets.filter((t) => !isOpenStatus(t.status)).length;
+      const mcrEscalated = mcrTickets.filter((t) => isEscalatedTicket(t) && isOpenStatus(t.status)).length;
+
+      const engOpen = engTickets.filter((t) => isOpenStatus(t.status)).length;
+      const engDone = engTickets.filter((t) => !isOpenStatus(t.status)).length;
+      const engP1 = engTickets.filter((t) => isOpenStatus(t.status) && (t.priority === 'P1 - Critical' || t.onAirImpact === 'Off-air Event (Major Impact)')).length;
+
+      const mseOpen = mseTickets.filter((t) => isOpenStatus(t.status)).length;
+      const mseDone = mseTickets.filter((t) => !isOpenStatus(t.status)).length;
+      const mseEscalatedIn = appData.tickets.filter((t) => getEscalationTarget(t) === 'mse' && isOpenStatus(t.status)).length;
+
+      const totalOpen = appData.tickets.filter((t) => isOpenStatus(t.status)).length;
+      const totalCompleted = appData.tickets.filter((t) => !isOpenStatus(t.status)).length;
+      const totalEscalated = appData.tickets.filter(isEscalatedTicket).length;
+      const escalatedToEngTotal = appData.tickets.filter((t) => getEscalationTarget(t) === 'tier2').length;
+      const escalatedToMseTotal = appData.tickets.filter((t) => getEscalationTarget(t) === 'mse').length;
+
+      const equipmentStats = getEquipmentStats();
+      const maxEqCount = equipmentStats.length ? equipmentStats[0].total : 1;
 
       return `
-        <div class="max-w-4xl mx-auto py-8 sm:py-14 space-y-8">
-          <div class="text-center space-y-2">
+        <div class="max-w-6xl mx-auto py-4 sm:py-8 space-y-8">
+          <div class="text-center space-y-1.5">
             <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Broadcast Support Portal
             </h1>
@@ -1167,96 +1490,303 @@
             </p>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- 3 Desk Launcher Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
             <!-- MCR (Tier 1) Card -->
             <button type="button" onclick="navigateTo('mcr')"
-              class="group text-left p-7 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-teal-500/70 dark:hover:border-teal-500/60 shadow-sm hover:shadow-xl hover:shadow-teal-500/10 transition-all flex flex-col justify-between min-h-[250px]">
-              <div class="space-y-4">
+              class="group text-left p-6 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-teal-500/70 dark:hover:border-teal-500/60 shadow-sm hover:shadow-xl hover:shadow-teal-500/10 transition-all flex flex-col justify-between min-h-[235px]">
+              <div class="space-y-3.5">
                 <div class="flex items-center justify-between">
-                  <div class="w-12 h-12 rounded-2xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-600 dark:text-teal-400">
-                    <i data-lucide="monitor" class="w-6 h-6"></i>
+                  <div class="w-11 h-11 rounded-2xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                    <i data-lucide="monitor" class="w-5 h-5"></i>
                   </div>
-                  <span class="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30">
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30">
                     Tier 1
                   </span>
                 </div>
                 <div>
-                  <h2 class="text-xl font-bold text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                  <h2 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
                     MCR
                   </h2>
-                  <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                    First-line Master Control Room queue. Log incoming faults and escalate complex issues directly to Broadcast Engineering.
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    First-line Master Control Room queue. Log incoming faults and escalate to Broadcast Engineering or MSE.
                   </p>
                 </div>
               </div>
 
-              <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-                <div class="flex items-center gap-4 text-xs">
+              <div class="pt-5 mt-5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                <div class="flex items-center gap-3 text-xs">
                   <div>
-                    <span class="font-mono font-bold text-lg text-slate-900 dark:text-white">${mcrOpen}</span>
+                    <span class="font-mono font-bold text-base text-slate-900 dark:text-white">${mcrOpen}</span>
                     <span class="text-slate-500 dark:text-slate-400 ml-1">Active</span>
                   </div>
                   <div class="text-slate-300 dark:text-slate-700">|</div>
                   <div>
-                    <span class="font-mono font-bold text-lg text-teal-600 dark:text-teal-400">${mcrEscalated}</span>
+                    <span class="font-mono font-bold text-base text-teal-600 dark:text-teal-400">${mcrEscalated}</span>
                     <span class="text-slate-500 dark:text-slate-400 ml-1">Escalated</span>
                   </div>
                 </div>
                 <span class="inline-flex items-center gap-1 text-xs font-semibold text-teal-600 dark:text-teal-400 group-hover:translate-x-1 transition-transform">
-                  Open MCR <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                  Open <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                 </span>
               </div>
             </button>
 
             <!-- Broadcast Engineering (Tier 2) Card -->
             <button type="button" onclick="navigateTo('eng')"
-              class="group text-left p-7 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-blue-500/70 dark:hover:border-blue-500/60 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all flex flex-col justify-between min-h-[250px]">
-              <div class="space-y-4">
+              class="group text-left p-6 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-blue-500/70 dark:hover:border-blue-500/60 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all flex flex-col justify-between min-h-[235px]">
+              <div class="space-y-3.5">
                 <div class="flex items-center justify-between">
-                  <div class="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                    <i data-lucide="wrench" class="w-6 h-6"></i>
+                  <div class="w-11 h-11 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                    <i data-lucide="wrench" class="w-5 h-5"></i>
                   </div>
-                  <span class="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                     Tier 2
                   </span>
                 </div>
                 <div>
-                  <h2 class="text-xl font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <h2 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     Broadcast Engineering
                   </h2>
-                  <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                    Tier 2 engineering workspace. Separated ticket queues, MCR escalations, fault-finding timelines, and Traffic Light Daily Handovers.
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    Tier 2 engineering workspace. Separated queues, MCR escalations, fault-finding timelines, and Traffic Light Daily Handovers.
                   </p>
                 </div>
               </div>
 
-              <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-                <div class="flex items-center gap-4 text-xs">
+              <div class="pt-5 mt-5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                <div class="flex items-center gap-3 text-xs">
                   <div>
-                    <span class="font-mono font-bold text-lg text-slate-900 dark:text-white">${engOpen}</span>
+                    <span class="font-mono font-bold text-base text-slate-900 dark:text-white">${engOpen}</span>
                     <span class="text-slate-500 dark:text-slate-400 ml-1">Active</span>
                   </div>
                   <div class="text-slate-300 dark:text-slate-700">|</div>
                   <div>
-                    <span class="font-mono font-bold text-lg ${engP1 > 0 ? 'text-red-500' : 'text-blue-600 dark:text-blue-400'}">${engP1}</span>
+                    <span class="font-mono font-bold text-base ${engP1 > 0 ? 'text-red-500' : 'text-blue-600 dark:text-blue-400'}">${engP1}</span>
                     <span class="text-slate-500 dark:text-slate-400 ml-1">P1 / Off-Air</span>
                   </div>
                 </div>
                 <span class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 group-hover:translate-x-1 transition-transform">
-                  Open Engineering <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                  Open <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </span>
+              </div>
+            </button>
+
+            <!-- MSE (Media Services Engineering) Card -->
+            <button type="button" onclick="navigateTo('mse')"
+              class="group text-left p-6 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-purple-500/70 dark:hover:border-purple-500/60 shadow-sm hover:shadow-xl hover:shadow-purple-500/10 transition-all flex flex-col justify-between min-h-[235px]">
+              <div class="space-y-3.5">
+                <div class="flex items-center justify-between">
+                  <div class="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                    <i data-lucide="server" class="w-5 h-5"></i>
+                  </div>
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                    MSE
+                  </span>
+                </div>
+                <div>
+                  <h2 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                    MSE (Media Services)
+                  </h2>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    Media Services Engineering desk. Record tickets and respond to those escalated directly from MCR.
+                  </p>
+                </div>
+              </div>
+
+              <div class="pt-5 mt-5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                <div class="flex items-center gap-3 text-xs">
+                  <div>
+                    <span class="font-mono font-bold text-base text-slate-900 dark:text-white">${mseOpen}</span>
+                    <span class="text-slate-500 dark:text-slate-400 ml-1">Active</span>
+                  </div>
+                  <div class="text-slate-300 dark:text-slate-700">|</div>
+                  <div>
+                    <span class="font-mono font-bold text-base text-purple-600 dark:text-purple-400">${mseEscalatedIn}</span>
+                    <span class="text-slate-500 dark:text-slate-400 ml-1">From MCR</span>
+                  </div>
+                </div>
+                <span class="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 dark:text-purple-400 group-hover:translate-x-1 transition-transform">
+                  Open <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                 </span>
               </div>
             </button>
           </div>
+
+          <!-- ==================== OPERATIONS STATISTICS SECTION ==================== -->
+          <section class="space-y-4 pt-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <i data-lucide="bar-chart-3" class="w-5 h-5 text-blue-500"></i>
+                <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Operations Statistics</h2>
+              </div>
+              <span class="text-[11px] font-mono text-slate-400">${appData.tickets.length} total tickets logged</span>
+            </div>
+
+            <!-- Summary KPIs -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="p-4 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Open Tickets (All Teams)</div>
+                  <div class="text-2xl font-mono font-extrabold text-slate-900 dark:text-white mt-1">${totalOpen}</div>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center">
+                  <i data-lucide="activity" class="w-5 h-5"></i>
+                </div>
+              </div>
+
+              <div class="p-4 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Completed Tickets</div>
+                  <div class="text-2xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">${totalCompleted}</div>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
+                  <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                </div>
+              </div>
+
+              <div class="p-4 rounded-2xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Escalated Tickets</div>
+                  <div class="text-2xl font-mono font-extrabold text-amber-500 mt-1">${totalEscalated}</div>
+                  <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${escalatedToEngTotal} to Broadcast Eng &bull; ${escalatedToMseTotal} to MSE</div>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center">
+                  <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Per-Team Breakdown & Most Reported Equipment -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              <!-- Team Performance Breakdown -->
+              <div class="lg:col-span-5 bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-bold text-slate-900 dark:text-white">Tickets by Team</h3>
+                  <span class="text-[11px] text-slate-400">Open vs Completed</span>
+                </div>
+
+                <div class="space-y-3">
+                  ${[
+                    { label: 'MCR (Tier 1)', open: mcrOpen, done: mcrDone, dot: 'bg-teal-500', bar: 'bg-teal-500', view: 'mcr' },
+                    { label: 'Broadcast Engineering', open: engOpen, done: engDone, dot: 'bg-blue-500', bar: 'bg-blue-500', view: 'eng' },
+                    { label: 'MSE (Media Services)', open: mseOpen, done: mseDone, dot: 'bg-purple-500', bar: 'bg-purple-500', view: 'mse' },
+                  ].map((row) => {
+                    const tot = row.open + row.done;
+                    const donePct = tot > 0 ? Math.round((row.done / tot) * 100) : 0;
+                    return `
+                      <div onclick="navigateTo('${row.view}')" class="cursor-pointer p-3.5 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors space-y-2">
+                        <div class="flex items-center justify-between text-xs">
+                          <span class="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full ${row.dot}"></span>
+                            ${row.label}
+                          </span>
+                          <div class="flex items-center gap-3 font-mono text-[11px]">
+                            <span class="text-slate-700 dark:text-slate-200"><strong>${row.open}</strong> open</span>
+                            <span class="text-emerald-600 dark:text-emerald-400"><strong>${row.done}</strong> completed</span>
+                          </div>
+                        </div>
+                        <div class="h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                          <div class="h-full ${row.bar} rounded-full transition-all" style="width: ${donePct}%"></div>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
+              <!-- Most Reported Equipment Counter -->
+              <div class="lg:col-span-7 bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <i data-lucide="cpu" class="w-4 h-4 text-amber-500"></i>
+                      Reported Equipment Counter
+                    </h3>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">Ranked by report frequency (includes kit reported once). Click any equipment to view its tickets.</p>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    ${equipmentStats.length} tracked ${equipmentStats.length === 1 ? 'item' : 'items'}
+                  </span>
+                </div>
+
+                ${equipmentStats.length === 0 ? `
+                  <div class="p-8 text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+                    No equipment has been logged on tickets yet. Add an Equipment name (e.g., <span class="font-mono">SNP-21-04</span>) when creating a ticket.
+                  </div>
+                ` : `
+                  <div class="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                    ${equipmentStats.map((eq, idx) => {
+                      const pct = Math.max(10, Math.round((eq.total / maxEqCount) * 100));
+                      const isHot = eq.total >= 3;
+                      const isRepeat = eq.total === 2;
+                      return `
+                        <button type="button" onclick="openEquipmentModal('${escapeHtml(eq.key)}')"
+                          class="w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] hover:bg-slate-100 dark:hover:bg-[#152038] border border-slate-200/80 dark:border-slate-800 transition-colors space-y-1.5">
+                          <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                              <span class="w-5 text-[11px] font-mono text-slate-400">#${idx + 1}</span>
+                              <span class="font-mono text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">${escapeHtml(eq.label)}</span>
+                              ${eq.open > 0 ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300">${eq.open} active</span>` : `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">all resolved</span>`}
+                            </div>
+                            <span class="px-2 py-0.5 rounded-md text-xs font-mono font-extrabold shrink-0 ${
+                              isHot
+                                ? 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/35'
+                                : isRepeat
+                                  ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/35'
+                                  : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                            }">
+                              ${eq.total}&times;
+                            </span>
+                          </div>
+                          <div class="h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                            <div class="h-full rounded-full ${isHot ? 'bg-red-500' : isRepeat ? 'bg-amber-500' : 'bg-blue-500'}" style="width: ${pct}%"></div>
+                          </div>
+                        </button>
+                      `;
+                    }).join('')}
+                  </div>
+                `}
+              </div>
+            </div>
+          </section>
         </div>
       `;
     }
 
+    function openEquipmentModal(equipmentKey) {
+      const stats = getEquipmentStats().find((e) => e.key === equipmentKey);
+      if (!stats) return;
+      document.getElementById('eq-modal-title').textContent = `Equipment: ${stats.label}`;
+      document.getElementById('eq-modal-sub').textContent = `${stats.total} total ${stats.total === 1 ? 'report' : 'reports'} (${stats.open} open, ${stats.closed} completed)`;
+      const body = document.getElementById('eq-modal-body');
+      body.innerHTML = sortTicketsOperational(stats.tickets)
+        .map((t) => `
+          <div onclick="closeEquipmentModal(); openDetailDrawer('${escapeHtml(t.id)}')"
+            class="cursor-pointer p-3.5 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] hover:bg-slate-100 dark:hover:bg-[#152038] border border-slate-200 dark:border-slate-800 space-y-1.5">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">${escapeHtml(t.id)}</span>
+              ${priorityBadge(t.priority)}
+              ${statusBadge(t.status)}
+              <span class="text-[11px] font-mono text-slate-400 ml-auto">${formatDisplayDate(t.dateTime || t.createdAt)}</span>
+            </div>
+            <div class="text-sm font-bold text-slate-900 dark:text-white">${escapeHtml(t.title)}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(t.client)} ${t.location ? `• ${escapeHtml(t.location)}` : ''}</div>
+          </div>
+        `).join('');
+      document.getElementById('equipment-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+
+    function closeEquipmentModal() {
+      document.getElementById('equipment-modal').classList.add('hidden');
+    }
+
     /********************************************************************
-     * 8. MCR (TIER 1) VIEW
+     * 8. LIVE SEARCH HELPERS (ZERO FOCUS LOSS) & MCR (TIER 1) VIEW
      ********************************************************************/
-    function renderMcrView() {
-      const mcrTickets = sortTicketsOperational(
+    function getFilteredMcrTickets() {
+      return sortTicketsOperational(
         appData.tickets.filter((t) => {
           if (t.tier !== 'tier1') return false;
           if (mcrFilters.status !== 'ALL' && t.status !== mcrFilters.status) return false;
@@ -1264,12 +1794,95 @@
           if (mcrFilters.impact !== 'ALL' && t.onAirImpact !== mcrFilters.impact) return false;
           if (mcrFilters.search.trim()) {
             const q = mcrFilters.search.toLowerCase();
-            const hay = `${t.id} ${t.title} ${t.description} ${t.client} ${(t.servicesAffected || []).join(' ')} ${t.assignedTo} ${t.reporter}`.toLowerCase();
+            const hay = `${t.id} ${t.title} ${t.description} ${t.client} ${t.location || ''} ${t.equipment || ''} ${t.assetBarcode || ''} ${t.cableType || ''} ${(t.servicesAffected || []).join(' ')} ${t.assignedTo} ${t.reporter}`.toLowerCase();
             if (!hay.includes(q)) return false;
           }
           return true;
         })
       );
+    }
+
+    function getFilteredEngTickets() {
+      const t2All = appData.tickets.filter(isTier2Ticket);
+      return sortTicketsOperational(
+        t2All.filter((t) => {
+          if (activeEngSection === 'escalated' && !(getEscalationTarget(t) === 'tier2' && isOpenStatus(t.status))) return false;
+          else if (activeEngSection === 'all' && !isOpenStatus(t.status)) return false;
+          else if (activeEngSection === 'closed' && isOpenStatus(t.status)) return false;
+          else if (TICKET_TYPES.includes(activeEngSection) && !(t.ticketType === activeEngSection && isOpenStatus(t.status))) return false;
+
+          if (engFilters.priority !== 'ALL' && t.priority !== engFilters.priority) return false;
+          if (engFilters.client !== 'ALL' && t.client !== engFilters.client) return false;
+          if (engFilters.service !== 'ALL' && !(t.servicesAffected || []).includes(engFilters.service)) return false;
+          if (engFilters.impact !== 'ALL' && t.onAirImpact !== engFilters.impact) return false;
+          if (engFilters.search.trim()) {
+            const q = engFilters.search.toLowerCase();
+            const hay = `${t.id} ${t.title} ${t.description} ${t.client} ${t.location || ''} ${t.equipment || ''} ${t.assetBarcode || ''} ${t.cableType || ''} ${(t.servicesAffected || []).join(' ')} ${t.assignedTo} ${t.reporter}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        })
+      );
+    }
+
+    function getFilteredMseTickets() {
+      const mseAll = appData.tickets.filter(isMseTicket);
+      return sortTicketsOperational(
+        mseAll.filter((t) => {
+          if (activeMseSection === 'escalated' && !(getEscalationTarget(t) === 'mse' && isOpenStatus(t.status))) return false;
+          else if (activeMseSection === 'all' && !isOpenStatus(t.status)) return false;
+          else if (activeMseSection === 'closed' && isOpenStatus(t.status)) return false;
+          else if (TICKET_TYPES.includes(activeMseSection) && !(t.ticketType === activeMseSection && isOpenStatus(t.status))) return false;
+
+          if (mseFilters.priority !== 'ALL' && t.priority !== mseFilters.priority) return false;
+          if (mseFilters.client !== 'ALL' && t.client !== mseFilters.client) return false;
+          if (mseFilters.service !== 'ALL' && !(t.servicesAffected || []).includes(mseFilters.service)) return false;
+          if (mseFilters.impact !== 'ALL' && t.onAirImpact !== mseFilters.impact) return false;
+          if (mseFilters.search.trim()) {
+            const q = mseFilters.search.toLowerCase();
+            const hay = `${t.id} ${t.title} ${t.description} ${t.client} ${t.location || ''} ${t.equipment || ''} ${t.assetBarcode || ''} ${t.cableType || ''} ${(t.servicesAffected || []).join(' ')} ${t.assignedTo} ${t.reporter}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        })
+      );
+    }
+
+    function handleSearchInput(scope, value) {
+      if (scope === 'mcr') mcrFilters.search = value;
+      else if (scope === 'eng') engFilters.search = value;
+      else if (scope === 'mse') mseFilters.search = value;
+      updateFilteredTicketList(scope);
+    }
+
+    function updateFilteredTicketList(scope) {
+      if (scope === 'mcr') {
+        const listEl = document.getElementById('mcr-ticket-list');
+        if (!listEl) return;
+        const list = getFilteredMcrTickets();
+        listEl.innerHTML = list.length === 0
+          ? `<div class="p-12 text-center rounded-2xl bg-white dark:bg-[#11192B] border border-dashed border-slate-300 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">No MCR tickets match your current filters.</div>`
+          : list.map((t) => renderTicketRow(t, true)).join('');
+      } else if (scope === 'eng') {
+        const listEl = document.getElementById('eng-ticket-list');
+        if (!listEl) return;
+        const list = getFilteredEngTickets();
+        listEl.innerHTML = list.length === 0
+          ? `<div class="p-12 text-center rounded-2xl bg-white dark:bg-[#11192B] border border-dashed border-slate-300 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">No tickets in this queue.</div>`
+          : list.map((t) => renderTicketRow(t, false)).join('');
+      } else if (scope === 'mse') {
+        const listEl = document.getElementById('mse-ticket-list');
+        if (!listEl) return;
+        const list = getFilteredMseTickets();
+        listEl.innerHTML = list.length === 0
+          ? `<div class="p-12 text-center rounded-2xl bg-white dark:bg-[#11192B] border border-dashed border-slate-300 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">No MSE tickets in this queue.</div>`
+          : list.map((t) => renderTicketRow(t, false)).join('');
+      }
+      refreshIcons();
+    }
+
+    function renderMcrView() {
+      const mcrTickets = getFilteredMcrTickets();
 
       return `
         <div class="space-y-5">
@@ -1284,7 +1897,7 @@
                   <h1 class="text-lg font-bold text-slate-900 dark:text-white">MCR — Tier 1 Queue</h1>
                   <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30">First-Line Ops</span>
                 </div>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Log live operational incidents and escalate faults requiring engineering intervention to Tier 2.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Log live operational incidents and escalate faults to Broadcast Engineering (Tier 2) or MSE.</p>
               </div>
             </div>
             <button type="button" onclick="openTicketModal(null, 'tier1')"
@@ -1297,21 +1910,21 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-white dark:bg-[#11192B] p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
             <div class="relative">
               <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
-              <input type="text" value="${escapeHtml(mcrFilters.search)}" oninput="mcrFilters.search = this.value; renderApp()"
-                placeholder="Search MCR tickets..."
+              <input id="mcr-search-input" data-search-input="true" type="text" value="${escapeHtml(mcrFilters.search)}" oninput="handleSearchInput('mcr', this.value)"
+                placeholder="Search MCR tickets, equipment..."
                 class="w-full pl-9 pr-3 py-2 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
             </div>
-            <select onchange="mcrFilters.status = this.value; renderApp()"
+            <select onchange="mcrFilters.status = this.value; updateFilteredTicketList('mcr')"
               class="px-3 py-2 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
               <option value="ALL">All Statuses</option>
               ${STATUSES.map((s) => `<option value="${escapeHtml(s)}" ${mcrFilters.status === s ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
             </select>
-            <select onchange="mcrFilters.priority = this.value; renderApp()"
+            <select onchange="mcrFilters.priority = this.value; updateFilteredTicketList('mcr')"
               class="px-3 py-2 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
               <option value="ALL">All Priorities</option>
               ${PRIORITIES.map((p) => `<option value="${escapeHtml(p)}" ${mcrFilters.priority === p ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('')}
             </select>
-            <select onchange="mcrFilters.impact = this.value; renderApp()"
+            <select onchange="mcrFilters.impact = this.value; updateFilteredTicketList('mcr')"
               class="px-3 py-2 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
               <option value="ALL">All On-Air Impacts</option>
               ${ON_AIR_IMPACTS.map((im) => `<option value="${escapeHtml(im)}" ${mcrFilters.impact === im ? 'selected' : ''}>${escapeHtml(im)}</option>`).join('')}
@@ -1319,7 +1932,7 @@
           </div>
 
           <!-- MCR Ticket List -->
-          <div class="space-y-2.5">
+          <div id="mcr-ticket-list" class="space-y-2.5">
             ${mcrTickets.length === 0
               ? `<div class="p-12 text-center rounded-2xl bg-white dark:bg-[#11192B] border border-dashed border-slate-300 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">No MCR tickets match your current filters.</div>`
               : mcrTickets.map((t) => renderTicketRow(t, true)).join('')}
@@ -1329,7 +1942,7 @@
     }
 
     /********************************************************************
-     * 9. BROADCAST ENGINEERING (TIER 2) VIEW
+     * 9. BROADCAST ENGINEERING (TIER 2) & MSE WORKSPACES
      ********************************************************************/
     function renderEngView() {
       const tier2ActiveCount = appData.tickets.filter((t) => isTier2Ticket(t) && isOpenStatus(t.status)).length;
@@ -1384,44 +1997,32 @@
     function renderEngTicketsWorkspace() {
       const t2All = appData.tickets.filter(isTier2Ticket);
       const countFor = (sec) => {
-        if (sec === 'escalated') return t2All.filter((t) => t.escalatedToTier2 && isOpenStatus(t.status)).length;
+        if (sec === 'escalated') return t2All.filter((t) => getEscalationTarget(t) === 'tier2' && isOpenStatus(t.status)).length;
         if (sec === 'all') return t2All.filter((t) => isOpenStatus(t.status)).length;
         if (sec === 'closed') return t2All.filter((t) => !isOpenStatus(t.status)).length;
         return t2All.filter((t) => t.ticketType === sec && isOpenStatus(t.status)).length;
       };
 
       const sections = [
+        { id: 'all', label: 'All Active Tickets', icon: 'layout-grid', accent: 'text-blue-400' },
         { id: 'escalated', label: 'Escalated from MCR (Tier 1)', icon: 'arrow-up-right', accent: 'text-amber-500' },
         { id: 'Incident', label: 'Incidents', icon: 'flame', accent: 'text-red-500' },
         { id: 'Handover Task', label: 'Handover Tasks', icon: 'repeat', accent: 'text-indigo-400' },
         { id: 'Maintenance', label: 'Maintenance', icon: 'settings', accent: 'text-sky-400' },
         { id: 'Change Request', label: 'Change Requests', icon: 'git-branch', accent: 'text-purple-400' },
-        { id: 'Request', label: 'Requests', icon: 'inbox', accent: 'text-teal-400' },
-        { id: 'all', label: 'All Active Tier 2', icon: 'list', accent: 'text-blue-400' },
         { id: 'closed', label: 'Closed / Resolved', icon: 'lock', accent: 'text-slate-400' },
       ];
 
-      const filtered = sortTicketsOperational(
-        t2All.filter((t) => {
-          if (activeEngSection === 'escalated' && !(t.escalatedToTier2 && isOpenStatus(t.status))) return false;
-          else if (activeEngSection === 'all' && !isOpenStatus(t.status)) return false;
-          else if (activeEngSection === 'closed' && isOpenStatus(t.status)) return false;
-          else if (TICKET_TYPES.includes(activeEngSection) && !(t.ticketType === activeEngSection && isOpenStatus(t.status))) return false;
-
-          if (engFilters.priority !== 'ALL' && t.priority !== engFilters.priority) return false;
-          if (engFilters.client !== 'ALL' && t.client !== engFilters.client) return false;
-          if (engFilters.service !== 'ALL' && !(t.servicesAffected || []).includes(engFilters.service)) return false;
-          if (engFilters.impact !== 'ALL' && t.onAirImpact !== engFilters.impact) return false;
-          if (engFilters.search.trim()) {
-            const q = engFilters.search.toLowerCase();
-            const hay = `${t.id} ${t.title} ${t.description} ${t.client} ${(t.servicesAffected || []).join(' ')} ${t.assignedTo} ${t.reporter}`.toLowerCase();
-            if (!hay.includes(q)) return false;
-          }
-          return true;
-        })
-      );
+      const filtered = getFilteredEngTickets();
 
       const activeSecObj = sections.find((s) => s.id === activeEngSection) || sections[0];
+      const activeOverviewStats = activeEngSection === 'all' ? {
+        activeTotal: countFor('all'),
+        escalated: countFor('escalated'),
+        critical: t2All.filter((t) => isOpenStatus(t.status) && (t.priority === 'P1 - Critical' || t.onAirImpact === 'Off-air Event (Major Impact)')).length,
+        closed: countFor('closed'),
+        allQueueTotal: appData.tickets.length,
+      } : null;
 
       return `
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -1463,43 +2064,77 @@
                   <span>${escapeHtml(activeSecObj.label)}</span>
                 </h2>
                 <p class="text-xs text-slate-500 dark:text-slate-400">
-                  ${activeEngSection === 'closed' ? 'Resolved and closed tickets are automatically locked. Open a ticket to unlock if further edits are needed.' : 'Newest tickets appear at the top. Click any ticket to log fault-finding replies or pin to Daily Handover.'}
+                  ${activeEngSection === 'closed'
+                    ? 'Resolved and closed tickets are automatically locked. Open a ticket to unlock if further edits are needed.'
+                    : activeEngSection === 'all'
+                      ? 'Default overview of all active Broadcast Engineering tickets across every queue. Export includes all queues and closed tickets.'
+                      : 'Newest tickets appear at the top. Click any ticket to log fault-finding replies or pin to Daily Handover.'}
                 </p>
               </div>
-              <button type="button" onclick="openTicketModal(null, 'tier2')"
-                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i> New Tier 2 Ticket
-              </button>
+              <div class="flex flex-wrap items-center gap-2">
+                ${activeEngSection === 'all' ? `
+                  <button type="button" onclick="exportTicketsCSV()" title="Export all tickets from all queues including closed/resolved"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i> Export All Tickets (${activeOverviewStats.allQueueTotal})
+                  </button>
+                ` : ''}
+                <button type="button" onclick="openTicketModal(null, 'tier2')"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i> New Tier 2 Ticket
+                </button>
+              </div>
             </div>
+
+            ${activeOverviewStats ? `
+              <!-- Compact Default Overview Stats -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div class="p-3 rounded-xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800">
+                  <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Active Tier 2</div>
+                  <div class="text-xl font-mono font-bold text-slate-900 dark:text-white mt-0.5">${activeOverviewStats.activeTotal}</div>
+                </div>
+                <button type="button" onclick="setEngSection('escalated')" class="text-left p-3 rounded-xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition-colors">
+                  <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Escalated from MCR</div>
+                  <div class="text-xl font-mono font-bold ${activeOverviewStats.escalated > 0 ? 'text-amber-500' : 'text-slate-900 dark:text-white'} mt-0.5">${activeOverviewStats.escalated}</div>
+                </button>
+                <div class="p-3 rounded-xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800">
+                  <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400">P1 / Off-Air Event</div>
+                  <div class="text-xl font-mono font-bold ${activeOverviewStats.critical > 0 ? 'text-red-500' : 'text-slate-900 dark:text-white'} mt-0.5">${activeOverviewStats.critical}</div>
+                </div>
+                <button type="button" onclick="setEngSection('closed')" class="text-left p-3 rounded-xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-slate-500/50 transition-colors">
+                  <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Closed / Resolved</div>
+                  <div class="text-xl font-mono font-bold text-slate-600 dark:text-slate-300 mt-0.5">${activeOverviewStats.closed}</div>
+                </button>
+              </div>
+            ` : ''}
 
             <!-- Filter Bar -->
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2.5 bg-white dark:bg-[#11192B] p-3 rounded-xl border border-slate-200 dark:border-slate-800">
               <div class="relative sm:col-span-2 xl:col-span-1">
                 <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
-                <input type="text" value="${escapeHtml(engFilters.search)}" oninput="engFilters.search = this.value; renderApp()"
+                <input id="eng-search-input" data-search-input="true" type="text" value="${escapeHtml(engFilters.search)}" oninput="handleSearchInput('eng', this.value)"
                   placeholder="Search..."
                   class="w-full pl-8 pr-3 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
               </div>
-              <select onchange="engFilters.priority = this.value; renderApp()" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
+              <select onchange="engFilters.priority = this.value; updateFilteredTicketList('eng')" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
                 <option value="ALL">All Priorities</option>
                 ${PRIORITIES.map((p) => `<option value="${escapeHtml(p)}" ${engFilters.priority === p ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('')}
               </select>
-              <select onchange="engFilters.client = this.value; renderApp()" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
+              <select onchange="engFilters.client = this.value; updateFilteredTicketList('eng')" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
                 <option value="ALL">All Clients</option>
                 ${CLIENTS.map((c) => `<option value="${escapeHtml(c)}" ${engFilters.client === c ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
               </select>
-              <select onchange="engFilters.service = this.value; renderApp()" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
+              <select onchange="engFilters.service = this.value; updateFilteredTicketList('eng')" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
                 <option value="ALL">All Services</option>
                 ${SERVICES.map((s) => `<option value="${escapeHtml(s)}" ${engFilters.service === s ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
               </select>
-              <select onchange="engFilters.impact = this.value; renderApp()" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
+              <select onchange="engFilters.impact = this.value; updateFilteredTicketList('eng')" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
                 <option value="ALL">All Impacts</option>
                 ${ON_AIR_IMPACTS.map((im) => `<option value="${escapeHtml(im)}" ${engFilters.impact === im ? 'selected' : ''}>${escapeHtml(im)}</option>`).join('')}
               </select>
             </div>
 
             <!-- Tickets -->
-            <div class="space-y-2.5">
+            <div id="eng-ticket-list" class="space-y-2.5">
               ${filtered.length === 0
                 ? `<div class="p-12 text-center rounded-2xl bg-white dark:bg-[#11192B] border border-dashed border-slate-300 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">No tickets in this queue.</div>`
                 : filtered.map((t) => renderTicketRow(t, false)).join('')}
@@ -1509,9 +2144,173 @@
       `;
     }
 
+    function renderMseView() {
+      const mseAll = appData.tickets.filter(isMseTicket);
+      const countFor = (sec) => {
+        if (sec === 'escalated') return mseAll.filter((t) => getEscalationTarget(t) === 'mse' && isOpenStatus(t.status)).length;
+        if (sec === 'all') return mseAll.filter((t) => isOpenStatus(t.status)).length;
+        if (sec === 'closed') return mseAll.filter((t) => !isOpenStatus(t.status)).length;
+        return mseAll.filter((t) => t.ticketType === sec && isOpenStatus(t.status)).length;
+      };
+
+      const sections = [
+        { id: 'all', label: 'All Active Tickets', icon: 'layout-grid', accent: 'text-purple-400' },
+        { id: 'escalated', label: 'Escalated from MCR (Tier 1)', icon: 'arrow-up-right', accent: 'text-amber-500' },
+        { id: 'Incident', label: 'Incidents', icon: 'flame', accent: 'text-red-500' },
+        { id: 'Handover Task', label: 'Handover Tasks', icon: 'repeat', accent: 'text-indigo-400' },
+        { id: 'Maintenance', label: 'Maintenance', icon: 'settings', accent: 'text-sky-400' },
+        { id: 'Change Request', label: 'Change Requests', icon: 'git-branch', accent: 'text-purple-400' },
+        { id: 'closed', label: 'Closed / Resolved', icon: 'lock', accent: 'text-slate-400' },
+      ];
+
+      const filtered = getFilteredMseTickets();
+      const activeSecObj = sections.find((s) => s.id === activeMseSection) || sections[0];
+      const activeOverviewStats = activeMseSection === 'all' ? {
+        activeTotal: countFor('all'),
+        escalated: countFor('escalated'),
+        critical: mseAll.filter((t) => isOpenStatus(t.status) && (t.priority === 'P1 - Critical' || t.onAirImpact === 'Off-air Event (Major Impact)')).length,
+        closed: countFor('closed'),
+        allQueueTotal: appData.tickets.length,
+      } : null;
+
+      return `
+        <div class="space-y-5">
+          <!-- MSE Header Banner -->
+          <div class="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#11192B] p-5 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                <i data-lucide="server" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h1 class="text-lg font-bold text-slate-900 dark:text-white">MSE — Media Services Engineering</h1>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">MSE Desk</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage Media Services tickets and escalations routed from MCR (Tier 1).</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              ${activeMseSection === 'all' ? `
+                <button type="button" onclick="exportTicketsCSV()" title="Export all tickets from all queues including closed/resolved"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
+                  <i data-lucide="download" class="w-3.5 h-3.5"></i> Export All Tickets (${activeOverviewStats.allQueueTotal})
+                </button>
+              ` : ''}
+              <button type="button" onclick="openTicketModal(null, 'mse')"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white shadow-sm">
+                <i data-lucide="plus" class="w-4 h-4"></i> New MSE Ticket
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            <!-- Left MSE Queue Sidebar -->
+            <aside class="lg:col-span-3 bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-2.5 space-y-1">
+              <div class="px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                MSE Queues
+              </div>
+              ${sections.map((sec) => {
+                const cnt = countFor(sec.id);
+                const isAct = activeMseSection === sec.id;
+                return `
+                  <button type="button" onclick="setMseSection('${escapeHtml(sec.id)}')"
+                    class="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      isAct
+                        ? 'bg-purple-600/15 text-purple-700 dark:text-purple-300 border border-purple-500/35'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 border border-transparent'
+                    }">
+                    <span class="flex items-center gap-2 min-w-0 truncate">
+                      <i data-lucide="${sec.icon}" class="w-4 h-4 shrink-0 ${isAct ? 'text-purple-500' : sec.accent}"></i>
+                      <span class="truncate">${escapeHtml(sec.label)}</span>
+                    </span>
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold shrink-0 ${
+                      sec.id === 'escalated' && cnt > 0
+                        ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    }">${cnt}</span>
+                  </button>
+                `;
+              }).join('')}
+            </aside>
+
+            <!-- Right MSE Queue Area -->
+            <section class="lg:col-span-9 space-y-4">
+              <div>
+                <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="${activeSecObj.icon}" class="w-5 h-5 ${activeSecObj.accent}"></i>
+                  <span>${escapeHtml(activeSecObj.label)}</span>
+                </h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  ${activeMseSection === 'closed'
+                    ? 'Resolved and closed MSE tickets are automatically locked.'
+                    : 'Newest tickets appear at the top. Click any ticket to log updates or resolve.'}
+                </p>
+              </div>
+
+              ${activeOverviewStats ? `
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div class="p-3 rounded-xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800">
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Active MSE</div>
+                    <div class="text-xl font-mono font-bold text-slate-900 dark:text-white mt-0.5">${activeOverviewStats.activeTotal}</div>
+                  </div>
+                  <button type="button" onclick="setMseSection('escalated')" class="text-left p-3 rounded-xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition-colors">
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Escalated from MCR</div>
+                    <div class="text-xl font-mono font-bold ${activeOverviewStats.escalated > 0 ? 'text-amber-500' : 'text-slate-900 dark:text-white'} mt-0.5">${activeOverviewStats.escalated}</div>
+                  </button>
+                  <div class="p-3 rounded-xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800">
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400">P1 / Off-Air Event</div>
+                    <div class="text-xl font-mono font-bold ${activeOverviewStats.critical > 0 ? 'text-red-500' : 'text-slate-900 dark:text-white'} mt-0.5">${activeOverviewStats.critical}</div>
+                  </div>
+                  <button type="button" onclick="setMseSection('closed')" class="text-left p-3 rounded-xl bg-white dark:bg-[#11192B] border border-slate-200 dark:border-slate-800 hover:border-slate-500/50 transition-colors">
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Closed / Resolved</div>
+                    <div class="text-xl font-mono font-bold text-slate-600 dark:text-slate-300 mt-0.5">${activeOverviewStats.closed}</div>
+                  </button>
+                </div>
+              ` : ''}
+
+              <!-- MSE Filter Bar -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2.5 bg-white dark:bg-[#11192B] p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div class="relative sm:col-span-2 xl:col-span-1">
+                  <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+                  <input id="mse-search-input" data-search-input="true" type="text" value="${escapeHtml(mseFilters.search)}" oninput="handleSearchInput('mse', this.value)"
+                    placeholder="Search MSE..."
+                    class="w-full pl-8 pr-3 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
+                </div>
+                <select onchange="mseFilters.priority = this.value; updateFilteredTicketList('mse')" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
+                  <option value="ALL">All Priorities</option>
+                  ${PRIORITIES.map((p) => `<option value="${escapeHtml(p)}" ${mseFilters.priority === p ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('')}
+                </select>
+                <select onchange="mseFilters.client = this.value; updateFilteredTicketList('mse')" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
+                  <option value="ALL">All Clients</option>
+                  ${CLIENTS.map((c) => `<option value="${escapeHtml(c)}" ${mseFilters.client === c ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
+                </select>
+                <select onchange="mseFilters.service = this.value; updateFilteredTicketList('mse')" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
+                  <option value="ALL">All Services</option>
+                  ${SERVICES.map((s) => `<option value="${escapeHtml(s)}" ${mseFilters.service === s ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+                </select>
+                <select onchange="mseFilters.impact = this.value; updateFilteredTicketList('mse')" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
+                  <option value="ALL">All Impacts</option>
+                  ${ON_AIR_IMPACTS.map((im) => `<option value="${escapeHtml(im)}" ${mseFilters.impact === im ? 'selected' : ''}>${escapeHtml(im)}</option>`).join('')}
+                </select>
+              </div>
+
+              <!-- MSE Tickets -->
+              <div id="mse-ticket-list" class="space-y-2.5">
+                ${filtered.length === 0
+                  ? `<div class="p-12 text-center rounded-2xl bg-white dark:bg-[#11192B] border border-dashed border-slate-300 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">No MSE tickets in this queue.</div>`
+                  : filtered.map((t) => renderTicketRow(t, false)).join('')}
+              </div>
+            </section>
+          </div>
+        </div>
+      `;
+    }
+
     function renderTicketRow(t, isMcrContext) {
       const replyCount = Array.isArray(t.replies) ? t.replies.length : 0;
       const services = Array.isArray(t.servicesAffected) ? t.servicesAffected : [];
+      const escTarget = getEscalationTarget(t);
+      const escLabel = escTarget === 'mse' ? 'Escalated to MSE' : escTarget === 'tier2' ? 'Escalated to Broadcast Eng' : '';
 
       return `
         <div onclick="openDetailDrawer('${escapeHtml(t.id)}')"
@@ -1520,12 +2319,12 @@
             <div class="space-y-1.5 min-w-0 flex-1">
               <!-- Badges Row -->
               <div class="flex flex-wrap items-center gap-1.5">
-                <span class="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">${escapeHtml(t.id)}</span>
+                <span class="font-mono text-xs font-bold ${t.tier === 'mse' ? 'text-purple-600 dark:text-purple-400' : t.tier === 'tier1' ? 'text-teal-600 dark:text-teal-400' : 'text-blue-600 dark:text-blue-400'}">${escapeHtml(t.id)}</span>
                 ${priorityBadge(t.priority)}
                 ${statusBadge(t.status)}
                 <span class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">${escapeHtml(t.ticketType)}</span>
                 ${impactBadge(t.onAirImpact)}
-                ${t.escalatedToTier2 ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35"><i data-lucide="arrow-up-right" class="w-3 h-3"></i>Escalated to Tier 2</span>` : ''}
+                ${escLabel ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${escTarget === 'mse' ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/35' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35'}"><i data-lucide="arrow-up-right" class="w-3 h-3"></i>${escLabel}</span>` : ''}
                 ${t.inHandover ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30"><i data-lucide="clipboard-check" class="w-3 h-3"></i>In Handover</span>` : ''}
                 ${t.locked ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"><i data-lucide="lock" class="w-3 h-3"></i>Locked</span>` : ''}
               </div>
@@ -1538,6 +2337,10 @@
               <!-- Meta Row -->
               <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
                 <span class="inline-flex items-center gap-1"><i data-lucide="tv" class="w-3.5 h-3.5 text-slate-400"></i> <strong class="text-slate-700 dark:text-slate-300">${escapeHtml(t.client)}</strong></span>
+                ${t.equipment ? `<span class="inline-flex items-center gap-1 font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-200"><i data-lucide="hard-drive" class="w-3.5 h-3.5 text-blue-400"></i> ${escapeHtml(t.equipment)}</span>` : ''}
+                ${t.location ? `<span class="inline-flex items-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i> ${escapeHtml(t.location)}</span>` : ''}
+                ${t.assetBarcode ? `<span class="inline-flex items-center gap-1 font-mono text-[11px]"><i data-lucide="scan-barcode" class="w-3.5 h-3.5 text-slate-400"></i> ${escapeHtml(t.assetBarcode)}</span>` : ''}
+                ${t.cableType ? `<span class="inline-flex items-center gap-1"><i data-lucide="cable" class="w-3.5 h-3.5 text-slate-400"></i> ${escapeHtml(t.cableType)}</span>` : ''}
                 <span class="inline-flex items-center gap-1"><i data-lucide="cpu" class="w-3.5 h-3.5 text-slate-400"></i> ${services.length ? escapeHtml(services.join(', ')) : 'No service specified'}</span>
                 <span class="inline-flex items-center gap-1"><i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i> ${t.assignedTo ? escapeHtml(t.assignedTo) : '<em class="text-slate-400">Unassigned</em>'}</span>
                 <span class="inline-flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i> ${formatDisplayDate(t.dateTime || t.createdAt)}</span>
@@ -1546,15 +2349,320 @@
             </div>
 
             <!-- Action Button (MCR Escalation) -->
-            ${isMcrContext && !t.escalatedToTier2 && isOpenStatus(t.status) ? `
+            ${isMcrContext && !escTarget && isOpenStatus(t.status) ? `
               <button type="button" onclick="event.stopPropagation(); openEscalateModal('${escapeHtml(t.id)}')"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40 shrink-0 transition-colors">
-                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i> Escalate to Tier 2
+                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i> Escalate
               </button>
             ` : ''}
           </div>
         </div>
       `;
+    }
+
+    /********************************************************************
+     * 9B. SYSADMIN MONITORING, DEBUGGING & DATABASE CONTROLS
+     ********************************************************************/
+    function renderDebugLogRows() {
+      if (debugLogs.length === 0) {
+        return `<div class="text-xs text-slate-500 font-mono py-3 text-center">No events recorded yet in this session.</div>`;
+      }
+      return debugLogs.map((entry) => {
+        const lvlColor = entry.level === 'error'
+          ? 'text-red-400'
+          : entry.level === 'warn'
+            ? 'text-amber-400'
+            : entry.level === 'success'
+              ? 'text-emerald-400'
+              : 'text-sky-400';
+        const ts = new Date(entry.time).toLocaleTimeString('en-GB', { hour12: false });
+        return `
+          <div class="flex items-start gap-2.5 text-[11px] font-mono py-1 border-b border-slate-800/70 last:border-0">
+            <span class="text-slate-500 shrink-0">${ts}</span>
+            <span class="${lvlColor} uppercase font-bold w-14 shrink-0">${escapeHtml(entry.level)}</span>
+            <span class="text-slate-300 break-all">${escapeHtml(entry.message)}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderSysAdminView() {
+      let localKb = '0.0';
+      try {
+        const raw = localStorage.getItem(LOCAL_STORAGE_KEY) || '';
+        localKb = (new Blob([raw]).size / 1024).toFixed(1);
+      } catch (e) {}
+
+      const totalReplies = appData.tickets.reduce((sum, t) => sum + (Array.isArray(t.replies) ? t.replies.length : 0), 0);
+      const lockedCount = appData.tickets.filter((t) => t.locked).length;
+      const c = appData.counters || { tier1: 0, tier2: 0, mse: 0 };
+      const cloudInfo = window.CloudSync && typeof window.CloudSync.getDiagnostics === 'function'
+        ? window.CloudSync.getDiagnostics()
+        : { projectId: 'Not configured', mode: 'Local Only', authStatus: 'None', pathMode: 'LocalStorage' };
+
+      return `
+        <div class="max-w-6xl mx-auto space-y-6">
+          <!-- Header -->
+          <div class="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#11192B] p-5 rounded-2xl border border-rose-500/30">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0">
+                <i data-lucide="shield" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h1 class="text-lg font-bold text-slate-900 dark:text-white">SysAdmin Console</h1>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30">Monitoring &amp; Debug</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Inspect live sync telemetry, database counters, JSON backups, and perform controlled resets.</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" onclick="exportFullJsonBackup()"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                <i data-lucide="file-json" class="w-3.5 h-3.5"></i> Export JSON Backup
+              </button>
+              <button type="button" onclick="exportTicketsCSV()"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> Export All CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- Diagnostics & Record Metrics -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <!-- Connection & Storage Health -->
+            <div class="bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+              <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="activity" class="w-4 h-4 text-emerald-500"></i> Sync &amp; Runtime Telemetry
+              </h2>
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800">
+                  <div class="text-[10px] font-mono uppercase text-slate-400">Sync Status</div>
+                  <div class="font-mono font-bold mt-1 ${syncState === 'live' ? 'text-emerald-500' : syncState === 'error' ? 'text-red-500' : 'text-amber-500'}">${escapeHtml(syncState.toUpperCase())}</div>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800">
+                  <div class="text-[10px] font-mono uppercase text-slate-400">Firebase Project</div>
+                  <div class="font-mono font-bold text-slate-900 dark:text-white mt-1 truncate" title="${escapeHtml(cloudInfo.projectId)}">${escapeHtml(cloudInfo.projectId)}</div>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800">
+                  <div class="text-[10px] font-mono uppercase text-slate-400">Last Cloud Snapshot</div>
+                  <div class="font-mono font-semibold text-slate-800 dark:text-slate-200 mt-1">${lastSyncTimestamp ? formatDisplayDate(lastSyncTimestamp) : 'No cloud sync yet'}</div>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800">
+                  <div class="text-[10px] font-mono uppercase text-slate-400">Local Cache Size</div>
+                  <div class="font-mono font-bold text-slate-900 dark:text-white mt-1">${localKb} KB</div>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800 col-span-2">
+                  <div class="text-[10px] font-mono uppercase text-slate-400">Auth / Path Mode</div>
+                  <div class="font-mono text-[11px] text-slate-700 dark:text-slate-300 mt-1">${escapeHtml(cloudInfo.authStatus)} &bull; ${escapeHtml(cloudInfo.pathMode)}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Database Collections & Ticket Counters -->
+            <div class="bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+              <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="database" class="w-4 h-4 text-blue-500"></i> Database &amp; Ticket Counters
+              </h2>
+              <div class="grid grid-cols-3 gap-2.5 text-center">
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800">
+                  <div class="text-[10px] font-mono uppercase text-slate-400">Tickets</div>
+                  <div class="text-xl font-mono font-bold text-slate-900 dark:text-white">${appData.tickets.length}</div>
+                  <div class="text-[10px] text-slate-500">${lockedCount} locked</div>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800">
+                  <div class="text-[10px] font-mono uppercase text-slate-400">Handovers</div>
+                  <div class="text-xl font-mono font-bold text-slate-900 dark:text-white">${appData.handovers.length}</div>
+                  <div class="text-[10px] text-slate-500">${appData.manualHandoverItems.length} notes</div>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800">
+                  <div class="text-[10px] font-mono uppercase text-slate-400">Replies</div>
+                  <div class="text-xl font-mono font-bold text-slate-900 dark:text-white">${totalReplies}</div>
+                  <div class="text-[10px] text-slate-500">timeline logs</div>
+                </div>
+              </div>
+
+              <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0A0F1C] border border-slate-200/80 dark:border-slate-800 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-mono uppercase font-bold text-slate-400">Next Ticket IDs</span>
+                  <button type="button" onclick="resetTicketCounters()"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/35">
+                    <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Reset Counts to 001
+                  </button>
+                </div>
+                <div class="grid grid-cols-3 gap-2 font-mono text-xs">
+                  <div class="px-2.5 py-1.5 rounded-lg bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/25">MCR-${String((Number(c.tier1) || 0) + 1).padStart(3, '0')}</div>
+                  <div class="px-2.5 py-1.5 rounded-lg bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/25">ENG-${String((Number(c.tier2) || 0) + 1).padStart(3, '0')}</div>
+                  <div class="px-2.5 py-1.5 rounded-lg bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/25">MSE-${String((Number(c.mse) || 0) + 1).padStart(3, '0')}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin Maintenance & Danger Zone -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <!-- Quick Tools -->
+            <div class="bg-white dark:bg-[#11192B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-3">
+              <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="wrench" class="w-4 h-4 text-sky-500"></i> Maintenance Utilities
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Useful tools for proof-of-concept testing, unlocking stuck records, or restoring sample data.
+              </p>
+              <div class="flex flex-wrap gap-2.5 pt-1">
+                <button type="button" onclick="resetTicketCounters()"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/35">
+                  <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset Ticket Count (001)
+                </button>
+                <button type="button" onclick="reseedDemoDatabase()"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-300 border border-indigo-500/35">
+                  <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Load Demo Seed Data
+                </button>
+                <button type="button" onclick="unlockAllTicketsAdmin()"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                  <i data-lucide="unlock" class="w-3.5 h-3.5"></i> Unlock All Locked Tickets
+                </button>
+              </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="bg-red-500/[0.06] dark:bg-red-950/20 rounded-2xl border border-red-500/40 p-5 space-y-3">
+              <h2 class="text-sm font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
+                <i data-lucide="alert-triangle" class="w-4 h-4"></i> Danger Zone — Wipe Database
+              </h2>
+              <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Permanently deletes all tickets, handovers, and manual notes across local storage and Firebase Firestore, and resets all ticket numbers back to <span class="font-mono font-bold">001</span>.
+              </p>
+              <div class="pt-1">
+                <button type="button" onclick="openClearDbModal()"
+                  class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-500 text-white shadow-sm">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i> Clear Entire Database...
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Session Debug Log -->
+          <div class="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+              <div class="flex items-center gap-2 text-xs font-mono font-bold text-slate-200">
+                <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
+                Live Session Event Log
+              </div>
+              <button type="button" onclick="debugLogs.length = 0; renderApp();"
+                class="text-[11px] font-mono text-slate-400 hover:text-white">Clear Log</button>
+            </div>
+            <div id="admin-debug-log" class="p-4 max-h-60 overflow-y-auto">
+              ${renderDebugLogRows()}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function resetTicketCounters() {
+      appData.counters = { tier1: 0, tier2: 0, mse: 0 };
+      cloudSaveCounters();
+      logSystemEvent('warn', 'SysAdmin reset MCR, ENG, and MSE ticket counters back to 001.');
+      renderApp();
+      showToast('Ticket counters reset to 001 (MCR-001, ENG-001, MSE-001)', 'success');
+    }
+
+    function unlockAllTicketsAdmin() {
+      let count = 0;
+      const nowIso = new Date().toISOString();
+      appData.tickets.forEach((t) => {
+        if (t.locked) {
+          t.locked = false;
+          t.lockedAt = null;
+          t.lockedBy = '';
+          t.updatedAt = nowIso;
+          cloudSaveTicket(t);
+          count += 1;
+        }
+      });
+      logSystemEvent('info', `SysAdmin unlocked ${count} locked ticket(s).`);
+      renderApp();
+      showToast(count > 0 ? `Unlocked ${count} ticket(s)` : 'No locked tickets found', 'info');
+    }
+
+    function exportFullJsonBackup() {
+      const payload = JSON.stringify({ exportedAt: new Date().toISOString(), ...appData }, null, 2);
+      const blob = new Blob([payload], { type: 'application/json;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `broadcast-support-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      logSystemEvent('success', 'Exported full JSON database backup.');
+      showToast('Full JSON backup downloaded', 'success');
+    }
+
+    function openClearDbModal() {
+      document.getElementById('clear-db-summary').textContent =
+        `Records to delete: ${appData.tickets.length} ticket(s), ${appData.handovers.length} handover(s), ${appData.manualHandoverItems.length} manual note(s).`;
+      const chk = document.getElementById('clear-db-confirm-check');
+      const btn = document.getElementById('clear-db-execute-btn');
+      if (chk) chk.checked = false;
+      if (btn) btn.disabled = true;
+      document.getElementById('clear-db-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+
+    function closeClearDbModal() {
+      document.getElementById('clear-db-modal').classList.add('hidden');
+    }
+
+    function toggleClearDbButton() {
+      const chk = document.getElementById('clear-db-confirm-check');
+      const btn = document.getElementById('clear-db-execute-btn');
+      if (btn && chk) btn.disabled = !chk.checked;
+    }
+
+    async function executeClearDatabase() {
+      const oldTickets = [...appData.tickets];
+      const oldHandovers = [...appData.handovers];
+      const oldManuals = [...appData.manualHandoverItems];
+
+      appData = {
+        tickets: [],
+        handovers: [],
+        manualHandoverItems: [],
+        counters: { tier1: 0, tier2: 0, mse: 0 },
+      };
+      activeHandoverId = null;
+      isHandoverMaximised = false;
+      if (openDrawerTicketId) closeDetailDrawer();
+      saveLocalFallback();
+
+      if (window.CloudSync && window.CloudSync.isReady()) {
+        await window.CloudSync.clearAllCloudData(oldTickets, oldHandovers, oldManuals);
+      }
+
+      closeClearDbModal();
+      logSystemEvent('warn', 'SysAdmin wiped entire database and reset ticket counters to 001.');
+      renderApp();
+      showToast('Database cleared & ticket numbers reset to 001', 'success');
+    }
+
+    async function reseedDemoDatabase() {
+      const seed = getSeedData();
+      appData = seed;
+      saveLocalFallback();
+      if (window.CloudSync && window.CloudSync.isReady()) {
+        const writes = [];
+        seed.handovers.forEach((ho) => writes.push(window.CloudSync.saveDoc('handovers', ho.id, ho)));
+        seed.tickets.forEach((t) => writes.push(window.CloudSync.saveDoc('tickets', t.id, t)));
+        seed.manualHandoverItems.forEach((m) => writes.push(window.CloudSync.saveDoc('manualHandoverItems', m.id, m)));
+        writes.push(window.CloudSync.saveDoc('meta', 'counters', seed.counters));
+        await Promise.all(writes);
+      }
+      logSystemEvent('success', 'SysAdmin loaded demo seed dataset.');
+      renderApp();
+      showToast('Demo seed data loaded', 'success');
     }
 
     /********************************************************************
@@ -2217,17 +3325,17 @@
           ` : ''}
 
           <!-- MCR Escalation Callout or Button -->
-          ${t.escalatedToTier2 ? `
-            <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1">
-              <div class="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                <i data-lucide="arrow-up-right" class="w-4 h-4"></i> Escalated from MCR (Tier 1) by ${escapeHtml(t.escalatedBy || 'MCR')}
+          ${isEscalatedTicket(t) ? `
+            <div class="p-3.5 rounded-xl ${getEscalationTarget(t) === 'mse' ? 'bg-purple-500/10 border-purple-500/30' : 'bg-amber-500/10 border-amber-500/30'} border space-y-1">
+              <div class="text-xs font-bold ${getEscalationTarget(t) === 'mse' ? 'text-purple-800 dark:text-purple-300' : 'text-amber-800 dark:text-amber-300'} flex items-center gap-1.5">
+                <i data-lucide="arrow-up-right" class="w-4 h-4"></i> Escalated from MCR (Tier 1) to ${getEscalationTarget(t) === 'mse' ? 'MSE (Media Services)' : 'Broadcast Engineering (Tier 2)'} by ${escapeHtml(t.escalatedBy || 'MCR')}
               </div>
               <p class="text-xs text-slate-700 dark:text-slate-300">${escapeHtml(t.escalationReason || 'No diagnostics provided.')}</p>
             </div>
           ` : (t.tier === 'tier1' && !locked && isOpenStatus(t.status)) ? `
             <button type="button" onclick="openEscalateModal('${escapeHtml(t.id)}')"
               class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/40 flex items-center justify-center gap-2">
-              <i data-lucide="arrow-up-right" class="w-4 h-4"></i> Escalate Ticket to Broadcast Engineering (Tier 2)
+              <i data-lucide="arrow-up-right" class="w-4 h-4"></i> Escalate Ticket to Broadcast Engineering or MSE
             </button>
           ` : ''}
 
@@ -2299,8 +3407,16 @@
               <div><span class="text-slate-400 block text-[10px] font-mono uppercase">Client</span><span class="font-semibold">${escapeHtml(t.client)}</span></div>
               <div><span class="text-slate-400 block text-[10px] font-mono uppercase">Ticket Type</span><span class="font-semibold">${escapeHtml(t.ticketType)}</span></div>
               <div><span class="text-slate-400 block text-[10px] font-mono uppercase">Logged Time</span><span class="font-semibold">${formatDisplayDate(t.dateTime || t.createdAt)}</span></div>
+              <div><span class="text-slate-400 block text-[10px] font-mono uppercase">Location</span><span class="font-semibold">${escapeHtml(t.location || '—')}</span></div>
+              <div><span class="text-slate-400 block text-[10px] font-mono uppercase">Equipment</span><span class="font-mono font-semibold text-blue-600 dark:text-blue-400">${escapeHtml(t.equipment || '—')}</span></div>
               <div><span class="text-slate-400 block text-[10px] font-mono uppercase">Reporter</span><span class="font-semibold">${escapeHtml(t.reporter || '—')}</span></div>
-              <div class="col-span-2">
+              ${(t.ticketType === 'Incident' || t.ticketType === 'Maintenance' || t.assetBarcode) ? `
+                <div><span class="text-slate-400 block text-[10px] font-mono uppercase">ID / Barcode</span><span class="font-mono font-semibold">${escapeHtml(t.assetBarcode || '—')}</span></div>
+              ` : ''}
+              ${(t.ticketType === 'Maintenance' || t.cableType) ? `
+                <div><span class="text-slate-400 block text-[10px] font-mono uppercase">Cable Type</span><span class="font-semibold">${escapeHtml(t.cableType || '—')}</span></div>
+              ` : ''}
+              <div class="col-span-2 sm:col-span-3">
                 <span class="text-slate-400 block text-[10px] font-mono uppercase mb-1">Services Affected</span>
                 <div class="flex flex-wrap gap-1">
                   ${services.length ? services.map((s) => `<span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[11px] font-medium">${escapeHtml(s)}</span>`).join('') : '<span class="text-slate-400">—</span>'}
@@ -2391,8 +3507,9 @@
     function updateReplyStatusHint(val) {
       const hint = document.getElementById('reply-status-hint');
       if (!hint) return;
-      if (val === 'Resolved' || val === 'Closed') {
-        hint.textContent = `Posting with "${val}" will automatically mark this ticket ${val}, auto-lock it, and move it to Closed / Resolved.`;
+      if (val === 'Resolution' || val === 'Resolved' || val === 'Closed') {
+        const target = val === 'Closed' ? 'Closed' : 'Resolved';
+        hint.textContent = `Posting with "${val}" will automatically mark this ticket ${target}, auto-lock it, and move it to Closed / Resolved.`;
         hint.classList.remove('hidden');
       } else {
         hint.classList.add('hidden');
@@ -2463,13 +3580,14 @@
       });
 
       let toastMsg = 'Update posted to timeline';
-      if (category === 'Resolved' || category === 'Closed') {
-        t.status = category;
+      if (category === 'Resolution' || category === 'Resolved' || category === 'Closed') {
+        const targetStatus = category === 'Closed' ? 'Closed' : 'Resolved';
+        t.status = targetStatus;
         t.locked = true;
         t.lockedAt = nowIso;
         t.lockedBy = 'Auto-Lock';
         if (t.inHandover) t.handoverLevel = 'green';
-        toastMsg = `Update posted — ${t.id} marked ${category} & auto-locked`;
+        toastMsg = `Update posted — ${t.id} marked ${targetStatus} & auto-locked`;
       }
 
       t.updatedAt = nowIso;
@@ -2489,11 +3607,13 @@
       const summary = [
         `[${t.id}] ${t.title}`,
         `Priority: ${t.priority} | Status: ${t.status} | Type: ${t.ticketType}`,
-        `Client: ${t.client} | On-Air Impact: ${t.onAirImpact}`,
+        `Client: ${t.client} | Location: ${t.location || '—'} | Equipment: ${t.equipment || '—'} | On-Air Impact: ${t.onAirImpact}`,
+        t.assetBarcode ? `ID / Barcode: ${t.assetBarcode}` : '',
+        t.cableType ? `Cable Type: ${t.cableType}` : '',
         `Services: ${(t.servicesAffected || []).join(', ') || 'None'}`,
         `Assigned To: ${t.assignedTo || 'Unassigned'} | Reporter: ${t.reporter || '—'}`,
         `Description: ${t.description || '—'}`,
-      ].join('\n');
+      ].filter(Boolean).join('\n');
       navigator.clipboard.writeText(summary)
         .then(() => showToast(`Copied ${t.id} summary`, 'success'))
         .catch(() => showToast('Clipboard unavailable', 'error'));
@@ -2510,6 +3630,8 @@
         <div class="font-mono font-bold text-teal-600 dark:text-teal-400">${escapeHtml(t.id)} — ${escapeHtml(t.priority)}</div>
         <div class="font-semibold text-slate-900 dark:text-white mt-0.5">${escapeHtml(t.title)}</div>
       `;
+      const defaultRadio = document.querySelector('input[name="esc-target"][value="tier2"]');
+      if (defaultRadio) defaultRadio.checked = true;
       document.getElementById('esc-operator').value = '';
       document.getElementById('esc-reason').value = '';
       document.getElementById('escalate-modal').classList.remove('hidden');
@@ -2525,12 +3647,17 @@
       e.preventDefault();
       const t = appData.tickets.find((x) => x.id === escalatingTicketId);
       if (!t) return;
+      const targetRadio = document.querySelector('input[name="esc-target"]:checked');
+      const target = targetRadio ? targetRadio.value : 'tier2';
+      const targetName = target === 'mse' ? 'MSE (Media Services Engineering)' : 'Broadcast Engineering (Tier 2)';
       const operator = document.getElementById('esc-operator').value.trim();
       const reason = document.getElementById('esc-reason').value.trim();
       if (!operator || !reason) return;
 
       const nowIso = new Date().toISOString();
-      t.escalatedToTier2 = true;
+      t.escalatedTo = target;
+      t.escalatedToTier2 = target === 'tier2';
+      t.escalatedToMse = target === 'mse';
       t.escalatedBy = operator;
       t.escalatedAt = nowIso;
       t.escalationReason = reason;
@@ -2539,16 +3666,17 @@
         id: 'rep-esc-' + Date.now(),
         author: operator,
         category: 'Escalation',
-        message: `Escalated from MCR (Tier 1) to Broadcast Engineering (Tier 2): ${reason}`,
+        message: `Escalated from MCR (Tier 1) to ${targetName}: ${reason}`,
         timestamp: nowIso,
       });
       t.updatedAt = nowIso;
 
       cloudSaveTicket(t);
+      logSystemEvent('info', `${t.id} escalated from MCR to ${targetName}.`);
       closeEscalateModal();
       if (openDrawerTicketId === t.id) renderDetailDrawer();
       renderApp();
-      showToast(`${t.id} escalated to Broadcast Engineering (Tier 2)`, 'success');
+      showToast(`${t.id} escalated to ${targetName}`, 'success');
     }
 
     /********************************************************************
@@ -2630,8 +3758,30 @@
       document.getElementById('tf-handover-options').classList.toggle('hidden', !checked);
     }
 
+    function handleModalTypeChange() {
+      const type = document.getElementById('tf-type').value;
+      const barcodeWrap = document.getElementById('tf-barcode-wrap');
+      const barcodeLabel = document.getElementById('tf-barcode-label');
+      const cableWrap = document.getElementById('tf-cable-wrap');
+
+      const showBarcode = type === 'Incident' || type === 'Maintenance';
+      const showCable = type === 'Maintenance';
+
+      barcodeWrap.classList.toggle('hidden', !showBarcode);
+      cableWrap.classList.toggle('hidden', !showCable);
+
+      if (type === 'Incident') {
+        barcodeLabel.textContent = 'ID / Barcode (if applicable)';
+        barcodeWrap.className = 'sm:col-span-2';
+      } else if (type === 'Maintenance') {
+        barcodeLabel.textContent = 'ID / Barcode';
+        barcodeWrap.className = '';
+      }
+    }
+
     function openTicketModal(ticketId = null, defaultTier = null) {
       populateTicketFormDropdowns();
+      populateEquipmentDatalist();
       editingTicketId = ticketId;
       isServicesDropdownOpen = false;
       document.getElementById('tf-services-dropdown').classList.add('hidden');
@@ -2647,11 +3797,15 @@
 
         document.getElementById('tf-title').value = t.title || '';
         document.getElementById('tf-priority').value = t.priority || PRIORITIES[2];
-        document.getElementById('tf-type').value = t.ticketType || TICKET_TYPES[0];
+        document.getElementById('tf-type').value = TICKET_TYPES.includes(t.ticketType) ? t.ticketType : TICKET_TYPES[0];
         document.getElementById('tf-status').value = t.status || STATUSES[0];
         document.getElementById('tf-client').value = t.client || CLIENTS[0];
         document.getElementById('tf-impact').value = t.onAirImpact || ON_AIR_IMPACTS[0];
         document.getElementById('tf-datetime').value = t.dateTime || toDateTimeLocalString(new Date(t.createdAt || Date.now()));
+        document.getElementById('tf-location').value = t.location || '';
+        document.getElementById('tf-equipment').value = t.equipment || '';
+        document.getElementById('tf-barcode').value = t.assetBarcode || '';
+        document.getElementById('tf-cable-type').value = t.cableType || '';
         document.getElementById('tf-reporter').value = t.reporter || '';
         document.getElementById('tf-assigned').value = t.assignedTo || '';
         document.getElementById('tf-description').value = t.description || '';
@@ -2665,7 +3819,7 @@
         document.getElementById('tf-submit-btn').textContent = 'Create Ticket';
         tierWrap.classList.remove('hidden');
 
-        const chosenTier = defaultTier || (activeView === 'mcr' ? 'tier1' : 'tier2');
+        const chosenTier = defaultTier || (activeView === 'mcr' ? 'tier1' : activeView === 'mse' ? 'mse' : 'tier2');
         const radio = document.querySelector(`input[name="tf-tier"][value="${chosenTier}"]`);
         if (radio) radio.checked = true;
 
@@ -2676,6 +3830,10 @@
         document.getElementById('tf-client').value = CLIENTS[0];
         document.getElementById('tf-impact').value = 'No Impact';
         document.getElementById('tf-datetime').value = toDateTimeLocalString(new Date());
+        document.getElementById('tf-location').value = '';
+        document.getElementById('tf-equipment').value = '';
+        document.getElementById('tf-barcode').value = '';
+        document.getElementById('tf-cable-type').value = '';
         document.getElementById('tf-reporter').value = '';
         document.getElementById('tf-assigned').value = '';
         document.getElementById('tf-description').value = '';
@@ -2687,6 +3845,7 @@
       }
 
       renderServicesMultiSelect();
+      handleModalTypeChange();
       toggleModalHandoverOptions();
       handleModalImpactChange();
       document.getElementById('ticket-modal').classList.remove('hidden');
@@ -2711,6 +3870,14 @@
       const client = document.getElementById('tf-client').value;
       const onAirImpact = document.getElementById('tf-impact').value;
       const dateTime = document.getElementById('tf-datetime').value;
+      const location = document.getElementById('tf-location').value.trim();
+      const equipment = document.getElementById('tf-equipment').value.trim();
+      const assetBarcode = (ticketType === 'Incident' || ticketType === 'Maintenance')
+        ? document.getElementById('tf-barcode').value.trim()
+        : '';
+      const cableType = ticketType === 'Maintenance'
+        ? document.getElementById('tf-cable-type').value.trim()
+        : '';
       const reporter = document.getElementById('tf-reporter').value.trim();
       const assignedTo = document.getElementById('tf-assigned').value.trim();
       const description = document.getElementById('tf-description').value.trim();
@@ -2728,7 +3895,7 @@
             ...appData.tickets[idx],
             title, priority, ticketType, status,
             servicesAffected: [...modalSelectedServices],
-            client, dateTime, onAirImpact, reporter, assignedTo, description,
+            client, location, equipment, assetBarcode, cableType, dateTime, onAirImpact, reporter, assignedTo, description,
             inHandover,
             handoverId: inHandover ? handoverId : '',
             handoverLevel: inHandover ? (autoLocked ? 'green' : handoverLevel) : appData.tickets[idx].handoverLevel,
@@ -2748,13 +3915,15 @@
         const newTicket = {
           id: generateTicketId(tier),
           tier,
+          escalatedTo: '',
           escalatedToTier2: false,
+          escalatedToMse: false,
           escalatedBy: '',
           escalatedAt: null,
           escalationReason: '',
           title, priority, ticketType, status,
           servicesAffected: [...modalSelectedServices],
-          client, dateTime, onAirImpact, reporter, assignedTo, description,
+          client, location, equipment, assetBarcode, cableType, dateTime, onAirImpact, reporter, assignedTo, description,
           inHandover,
           handoverId: inHandover ? handoverId : '',
           handoverLevel: inHandover ? (autoLocked ? 'green' : handoverLevel) : suggestHandoverLevel({ status, priority, onAirImpact }),
@@ -2770,12 +3939,15 @@
         };
         appData.tickets.unshift(newTicket);
         cloudSaveTicket(newTicket);
+        logSystemEvent('success', `Created ticket ${newTicket.id} (${tier.toUpperCase()}).`);
         closeTicketModal();
         if (activeView === 'home') {
-          activeView = tier === 'tier1' ? 'mcr' : 'eng';
+          activeView = tier === 'tier1' ? 'mcr' : tier === 'mse' ? 'mse' : 'eng';
           if (activeView === 'eng') {
             activeEngTab = 'tickets';
-            activeEngSection = autoLocked ? 'closed' : ticketType;
+            activeEngSection = autoLocked ? 'closed' : 'all';
+          } else if (activeView === 'mse') {
+            activeMseSection = autoLocked ? 'closed' : 'all';
           }
         }
         renderApp();
@@ -2848,17 +4020,22 @@
     }
 
     function exportTicketsCSV() {
-      const headers = ['ID', 'Tier', 'EscalatedToTier2', 'Priority', 'Ticket Type', 'Status', 'Client', 'Services Affected', 'On Air Impact', 'Date and Time', 'Title', 'Description', 'Reporter', 'Assigned To', 'Updates Count'];
+      const headers = ['ID', 'Team', 'Escalated To', 'Priority', 'Ticket Type', 'Status', 'Client', 'Location', 'Equipment', 'ID / Barcode', 'Cable Type', 'Services Affected', 'On Air Impact', 'Date and Time', 'Title', 'Description', 'Reporter', 'Assigned To', 'Updates Count'];
       const rows = [headers];
       sortTicketsOperational(appData.tickets).forEach((t) => {
+        const escTarget = getEscalationTarget(t);
         rows.push([
           t.id,
-          t.tier === 'tier1' ? 'MCR (Tier 1)' : 'Broadcast Engineering (Tier 2)',
-          t.escalatedToTier2 ? 'Yes' : 'No',
+          t.tier === 'tier1' ? 'MCR (Tier 1)' : t.tier === 'mse' ? 'MSE (Media Services)' : 'Broadcast Engineering (Tier 2)',
+          escTarget === 'mse' ? 'MSE' : escTarget === 'tier2' ? 'Broadcast Engineering' : 'No',
           t.priority,
           t.ticketType,
           t.status,
           t.client,
+          t.location || '',
+          t.equipment || '',
+          t.assetBarcode || '',
+          t.cableType || '',
           (t.servicesAffected || []).join('; '),
           t.onAirImpact,
           t.dateTime || t.createdAt,
@@ -2871,7 +4048,7 @@
       });
       const dateStr = new Date().toISOString().slice(0, 10);
       downloadCSV(`broadcast-tickets-${dateStr}.csv`, rows);
-      showToast('Exported tickets CSV', 'success');
+      showToast(`Exported ${appData.tickets.length} tickets (all queues & closed) to CSV`, 'success');
     }
 
     function openWeeklyArchiveModal() {
@@ -3007,13 +4184,19 @@
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+    /********************************************************************
+     * PASTE YOUR FIREBASE CONFIG BELOW (Step 6 from Firebase Console)
+     * Replace the 6 PASTE_YOUR_... values with your own keys,
+     * then commit this entire file as index.html on GitHub.
+     ********************************************************************/
     const USER_FIREBASE_CONFIG = {
       apiKey: "AIzaSyCR5tyF9gbWewy0lOO2fHwqs6cX_ABFiUk",
       authDomain: "bce-tickets-poc.firebaseapp.com",
       projectId: "bce-tickets-poc",
       storageBucket: "bce-tickets-poc.firebasestorage.app",
       messagingSenderId: "1073019845237",
-      appId: "1:1073019845237:web:795b05e6d1f931132b963c"
+	  appId: "1:1073019845237:web:795b05e6d1f931132b963c",
+	  measurementId: "G-KY0TTRPCCV"
     };
 
     const DEFAULT_APP_ID = "broadcast-support-desk";
@@ -3024,9 +4207,19 @@
     let activeAppId = DEFAULT_APP_ID;
     let activeUser = null;
     let externalTestModeAllowed = false;
+    let activeProjectId = 'Not configured';
 
     function isReady() {
       return Boolean(db && (activeUser || externalTestModeAllowed));
+    }
+
+    function getDiagnostics() {
+      return {
+        projectId: activeProjectId,
+        mode: isReady() ? 'Firestore Real-Time' : 'Local Only',
+        authStatus: activeUser ? `Authenticated (${activeUser.uid.slice(0, 8)}...)` : externalTestModeAllowed ? 'Firestore Test Mode' : 'Not signed in',
+        pathMode: useArtifactPath ? `artifacts/${activeAppId}/public/data/*` : 'Root Collections',
+      };
     }
 
     function getColRef(collectionName) {
@@ -3080,10 +4273,28 @@
         seed.handovers.forEach((ho) => writes.push(saveDoc('handovers', ho.id, ho)));
         seed.tickets.forEach((t) => writes.push(saveDoc('tickets', t.id, t)));
         seed.manualHandoverItems.forEach((m) => writes.push(saveDoc('manualHandoverItems', m.id, m)));
+        writes.push(saveDoc('meta', 'counters', seed.counters));
         writes.push(setDoc(metaRef, { seeded: true, seededAt: new Date().toISOString() }));
         await Promise.all(writes);
+        if (window.logSystemEvent) window.logSystemEvent('success', 'Seeded initial Firestore database.');
       } catch (err) {
         console.warn('Initial seed check skipped:', err);
+      }
+    }
+
+    async function clearAllCloudData(ticketsList, handoversList, manualsList) {
+      if (!isReady()) return;
+      try {
+        const ops = [];
+        ticketsList.forEach((t) => ops.push(deleteDocById('tickets', t.id)));
+        handoversList.forEach((h) => ops.push(deleteDocById('handovers', h.id)));
+        manualsList.forEach((m) => ops.push(deleteDocById('manualHandoverItems', m.id)));
+        ops.push(saveDoc('meta', 'counters', { tier1: 0, tier2: 0, mse: 0 }));
+        ops.push(setDoc(getDocRef('meta', 'bootstrap'), { seeded: true, clearedAt: new Date().toISOString() }));
+        await Promise.all(ops);
+      } catch (err) {
+        console.error('Failed to clear cloud database:', err);
+        if (window.logSystemEvent) window.logSystemEvent('error', `Cloud clear failed: ${err.message}`);
       }
     }
 
@@ -3101,6 +4312,22 @@
         (err) => {
           console.error(`Firestore listener error (${collectionName}):`, err);
           window.updateSyncStatusUI('error', `Real-time listener error (${collectionName}): ${err.message}`);
+          if (window.logSystemEvent) window.logSystemEvent('error', `Listener error (${collectionName}): ${err.message}`);
+        }
+      );
+    }
+
+    function subscribeToCounters() {
+      if (!isReady()) return;
+      onSnapshot(
+        getDocRef('meta', 'counters'),
+        (snap) => {
+          if (snap.exists()) {
+            window.applyCloudSnapshot('counters', snap.data());
+          }
+        },
+        (err) => {
+          console.warn('Counters listener warning:', err);
         }
       );
     }
@@ -3118,12 +4345,14 @@
           'setup',
           'Local Demo mode. Paste your firebaseConfig near the bottom of index.html to enable live multi-user sync.'
         );
+        if (window.logSystemEvent) window.logSystemEvent('info', 'Running in Local Demo mode (no Firebase config detected).');
         return;
       }
 
       try {
         useArtifactPath = hasEnvConfig;
         const firebaseConfig = hasEnvConfig ? JSON.parse(__firebase_config) : USER_FIREBASE_CONFIG;
+        activeProjectId = firebaseConfig.projectId || 'Unknown';
         activeAppId =
           hasEnvConfig && typeof __app_id !== 'undefined' && __app_id
             ? __app_id
@@ -3156,11 +4385,14 @@
         subscribeToCollection('tickets');
         subscribeToCollection('handovers');
         subscribeToCollection('manualHandoverItems');
+        subscribeToCounters();
 
         window.updateSyncStatusUI('live', `Connected to Firebase Firestore (${firebaseConfig.projectId})`);
+        if (window.logSystemEvent) window.logSystemEvent('success', `Connected to Firebase Firestore (${firebaseConfig.projectId}).`);
       } catch (err) {
         console.error('Firebase initialization error:', err);
         window.updateSyncStatusUI('error', `Firebase connection error: ${err.message || 'Check your config'}`);
+        if (window.logSystemEvent) window.logSystemEvent('error', `Firebase init failed: ${err.message}`);
       }
     }
 
@@ -3168,6 +4400,8 @@
       isReady,
       saveDoc,
       deleteDocById,
+      clearAllCloudData,
+      getDiagnostics,
     };
 
     initCloudSync();
