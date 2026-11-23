@@ -593,8 +593,86 @@
     }
 
     /**
-     * Encodes/obfuscates Firebase config so it is never stored or shared as plain JSON.
-     * Note: Web Firebase SDK still needs the decoded values at runtime, so always pair
+     * Pure-JS synchronous SHA-256 (FIPS 180-4) so SysAdmin password hashing
+     * works reliably in all environments (HTTPS, GitHub Pages, local file, and iframes).
+     */
+    function sha256Hex(input) {
+      const rightRotate = (value, amount) => (value >>> amount) | (value << (32 - amount));
+      const maxWord = Math.pow(2, 32);
+      const bytes = new TextEncoder().encode(String(input ?? ''));
+      const bitLen = bytes.length * 8;
+
+      const hash = [];
+      const k = [];
+      let primeCounter = 0;
+      const isComposite = {};
+      for (let candidate = 2; primeCounter < 64; candidate++) {
+        if (!isComposite[candidate]) {
+          for (let i = candidate * candidate; i < 320; i += candidate) {
+            isComposite[i] = true;
+          }
+          hash[primeCounter] = (Math.pow(candidate, 0.5) * maxWord) | 0;
+          k[primeCounter++] = (Math.pow(candidate, 1 / 3) * maxWord) | 0;
+        }
+      }
+
+      const paddedLen = Math.ceil((bytes.length + 9) / 64) * 64;
+      const padded = new Uint8Array(paddedLen);
+      padded.set(bytes);
+      padded[bytes.length] = 0x80;
+      const view = new DataView(padded.buffer);
+      view.setUint32(paddedLen - 8, Math.floor(bitLen / 0x100000000), false);
+      view.setUint32(paddedLen - 4, bitLen >>> 0, false);
+
+      const h = hash.slice(0, 8);
+      const w = new Int32Array(64);
+
+      for (let j = 0; j < paddedLen; j += 64) {
+        for (let i = 0; i < 16; i++) {
+          w[i] = view.getInt32(j + i * 4, false);
+        }
+        for (let i = 16; i < 64; i++) {
+          const w15 = w[i - 15];
+          const w2 = w[i - 2];
+          const s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);
+          const s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);
+          w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+        }
+
+        let a = h[0], b = h[1], c = h[2], d = h[3];
+        let e = h[4], f = h[5], g = h[6], hh = h[7];
+
+        for (let i = 0; i < 64; i++) {
+          const S1 = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
+          const ch = (e & f) ^ (~e & g);
+          const temp1 = (hh + S1 + ch + k[i] + w[i]) | 0;
+          const S0 = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
+          const maj = (a & b) ^ (a & c) ^ (b & c);
+          const temp2 = (S0 + maj) | 0;
+
+          hh = g;
+          g = f;
+          f = e;
+          e = (d + temp1) | 0;
+          d = c;
+          c = b;
+          b = a;
+          a = (temp1 + temp2) | 0;
+        }
+
+        h[0] = (h[0] + a) | 0;
+        h[1] = (h[1] + b) | 0;
+        h[2] = (h[2] + c) | 0;
+        h[3] = (h[3] + d) | 0;
+        h[4] = (h[4] + e) | 0;
+        h[5] = (h[5] + f) | 0;
+        h[6] = (h[6] + g) | 0;
+        h[7] = (h[7] + hh) | 0;
+      }
+
+      return h.map((v) => (v >>> 0).toString(16).padStart(8, '0')).join('');
+    }
+
     const DEFAULT_ADMIN_HASH = sha256Hex('admin');
 
     function getAdminPasswordHash() {
@@ -606,6 +684,19 @@
     function setAdminPasswordHashLocal(hash) {
       safeStorageSet(ADMIN_AUTH_KEY, hash);
     }
+
+    /**
+     * Encodes/obfuscates Firebase config so it is never stored or shared as plain JSON.
+     * Note: Web Firebase SDK still needs the decoded values at runtime, so always pair
+     * this with Google Cloud HTTP Referrer restrictions and Firestore Security Rules.
+     */
+    function encodeObfuscatedConfig(cfg) {
+      const jsonBytes = new TextEncoder().encode(JSON.stringify(cfg));
+      const saltBytes = new TextEncoder().encode(CONFIG_CIPHER_SALT);
+      const out = new Uint8Array(jsonBytes.length);
+      for (let i = 0; i < jsonBytes.length; i++) {
+        out[i] = jsonBytes[i] ^ saltBytes[i % saltBytes.length] ^ ((i * 31) & 0xff);
+      }
       let bin = '';
       for (let i = 0; i < out.length; i++) bin += String.fromCharCode(out[i]);
       return 'BSDCFG1:' + btoa(bin);
@@ -2662,7 +2753,7 @@
             <form onsubmit="submitAdminLogin(event)" class="p-6 space-y-4">
               <div>
                 <label for="admin-login-password" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">SysAdmin Password</label>
-                <input id="admin-login-password" type="password" required autocomplete="current-password" placeholder="Enter password..."
+                <input id="admin-login-password" type="password" required autofocus autocomplete="current-password" placeholder="Enter password..."
                   class="w-full px-3.5 py-2.5 rounded-xl text-sm bg-slate-50 dark:bg-[#0A0F1C] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50" />
               </div>
               <div id="admin-login-error" class="hidden p-2.5 rounded-lg bg-red-500/15 border border-red-500/35 text-xs font-semibold text-red-600 dark:text-red-300">
@@ -2979,7 +3070,7 @@
           ${usingDefaultPw ? `
             <div class="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-200">
               <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500 shrink-0"></i>
-              <span>You are currently using the default SysAdmin password (<span class="font-mono font-bold">admin</span>). Update it below in <strong>SysAdmin Security</strong> before sharing your PoC link.</span>
+              <span>You are currently using the default SysAdmin password. Update it below in <strong>SysAdmin Security</strong> before sharing your PoC link.</span>
             </div>
           ` : ''}
 
@@ -4903,7 +4994,7 @@
       appData = loadLocalFallback();
       updateSyncStatusUI(
         'setup',
-        'Local Demo mode. Open SysAdmin (default password: admin) -> Firebase API Settings to connect live sync.'
+        'Local Demo mode. Open SysAdmin -> Firebase API Settings to connect live sync.'
       );
       renderApp();
     }
@@ -4927,7 +5018,7 @@
     /********************************************************************
      * API CONFIGURATION NOTE:
      * You no longer need to paste API keys into this HTML file!
-     * Open SysAdmin (default password: admin) -> Firebase API Settings
+     * Open SysAdmin -> Firebase API Settings
      * to enter & mask your Firebase config directly in the browser.
      ********************************************************************/
     const DEFAULT_APP_ID = "broadcast-support-desk";
@@ -5088,7 +5179,7 @@
       }
       window.updateSyncStatusUI(
         'setup',
-        'Local Demo mode. Open SysAdmin (default password: admin) -> Firebase API Settings to connect live sync.'
+        'Local Demo mode. Open SysAdmin -> Firebase API Settings to connect live sync.'
       );
     }
 
@@ -5172,7 +5263,7 @@
 
       window.updateSyncStatusUI(
         'setup',
-        'Local Demo mode. Open SysAdmin (default password: admin) -> Firebase API Settings to connect live sync.'
+        'Local Demo mode. Open SysAdmin -> Firebase API Settings to connect live sync.'
       );
       if (window.logSystemEvent) window.logSystemEvent('info', 'Running in Local Demo mode (configure Firebase in SysAdmin).');
     }
