@@ -1750,7 +1750,7 @@
                     <i data-lucide="monitor" class="w-5 h-5"></i>
                   </div>
                   <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30">
-                    MCR (Tier 1)
+                    Tier 1
                   </span>
                 </div>
                 <div>
@@ -1790,7 +1790,7 @@
                     <i data-lucide="wrench" class="w-5 h-5"></i>
                   </div>
                   <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
-                    BCE (Tier 2)
+                    Tier 2
                   </span>
                 </div>
                 <div>
@@ -1830,7 +1830,7 @@
                     <i data-lucide="server" class="w-5 h-5"></i>
                   </div>
                   <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
-                    MSE (Tier 2)
+                    MSE
                   </span>
                 </div>
                 <div>
@@ -1838,7 +1838,7 @@
                     MSE (Media Services)
                   </h2>
                   <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                     Tier 2 Media Services Engineering desk. Separated queues, MCR escalations, fault-finding timelines. Generate new tickets, or manage tickets escalated directly from MCR.
+                    Media Services Engineering desk. Manage media workflows, encoders, and tickets escalated directly from MCR.
                   </p>
                 </div>
               </div>
@@ -4893,13 +4893,40 @@
       renderApp();
     }
 
+    function formatCsvDate(isoOrLocal) {
+      if (!isoOrLocal) return '';
+      const d = new Date(isoOrLocal);
+      if (isNaN(d.getTime())) return String(isoOrLocal).trim();
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function cleanCsvText(val, singleLine = false) {
+      let str = String(val ?? '').replace(/\r\n?/g, '\n').trim();
+      if (singleLine) {
+        str = str.replace(/\s*\n+\s*/g, ' ').replace(/[ \t]{2,}/g, ' ');
+      } else {
+        str = str.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+      }
+      return str;
+    }
+
     function csvCell(val) {
-      return `"${String(val ?? '').replace(/"/g, '""')}"`;
+      let str = String(val ?? '').replace(/\r\n?/g, '\n');
+      // Prevent spreadsheet apps (Excel/Sheets) from misinterpreting leading characters as formulas
+      if (/^[=+@]/.test(str) || (/^-/.test(str) && !/^-\d+(\.\d+)?$/.test(str))) {
+        str = `'${str}`;
+      }
+      if (/[",\n\r]/.test(str) || /^\s|\s$/.test(str)) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
     }
 
     function downloadCSV(filename, rows) {
-      const csvContent = rows.map((r) => r.map(csvCell).join(',')).join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      // Prepend UTF-8 BOM (\uFEFF) and use RFC 4180 CRLF (\r\n) so Excel renders Unicode symbols cleanly
+      const csvBody = rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
+      const blob = new Blob(['\uFEFF' + csvBody + '\r\n'], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -4910,33 +4937,109 @@
       URL.revokeObjectURL(url);
     }
 
+    function formatReplyForCsv(reply) {
+      if (!reply) return '';
+      const ts = formatCsvDate(reply.timestamp);
+      const author = cleanCsvText(reply.author || 'Engineer', true);
+      const cat = cleanCsvText(reply.category || 'Update', true);
+      const msg = cleanCsvText(reply.message || '', true);
+      return `[${ts} | ${author} | ${cat}] ${msg}`;
+    }
+
     function exportTicketsCSV() {
-      const headers = ['ID', 'Team', 'Escalated To', 'Priority', 'Ticket Type', 'Status', 'Client', 'Location', 'Equipment', 'ID / Barcode', 'Cable Type', 'Services Affected', 'On Air Impact', 'Date and Time', 'Title', 'Description', 'Reporter', 'Assigned To', 'Updates Count'];
+      const headers = [
+        'Ticket ID',
+        'Logged Date/Time',
+        'Status',
+        'Priority',
+        'On-Air Impact',
+        'Team',
+        'Ticket Type',
+        'Client',
+        'Title',
+        'Services Affected',
+        'Equipment',
+        'Location',
+        'ID / Barcode',
+        'Cable Type',
+        'Reporter',
+        'Assigned To',
+        'Escalated To',
+        'Escalation Details',
+        'Daily Handover',
+        'Description',
+        'Updates Count',
+        'Latest Update',
+        'Full Timeline',
+        'Last Updated',
+      ];
+
+      const priorityRank = (p) => {
+        const idx = PRIORITIES.indexOf(p);
+        return idx === -1 ? 99 : idx;
+      };
+
+      // Sort cleanly: Open/Active tickets first (by Priority P1 -> P4, then newest), then Resolved/Closed (newest first)
+      const sortedTickets = [...appData.tickets].sort((a, b) => {
+        const aOpen = isOpenStatus(a.status) ? 0 : 1;
+        const bOpen = isOpenStatus(b.status) ? 0 : 1;
+        if (aOpen !== bOpen) return aOpen - bOpen;
+        if (aOpen === 0) {
+          const pDiff = priorityRank(a.priority) - priorityRank(b.priority);
+          if (pDiff !== 0) return pDiff;
+        }
+        const ta = new Date(a.dateTime || a.createdAt || 0).getTime();
+        const tb = new Date(b.dateTime || b.createdAt || 0).getTime();
+        return tb - ta;
+      });
+
       const rows = [headers];
-      sortTicketsOperational(appData.tickets).forEach((t) => {
+      sortedTickets.forEach((t) => {
         const escTarget = getEscalationTarget(t);
+        const escTeam = escTarget === 'mse' ? 'MSE' : escTarget === 'tier2' ? 'Broadcast Engineering' : 'None';
+        const escDetails = escTarget
+          ? cleanCsvText(
+              `${t.escalatedBy ? `By ${t.escalatedBy}` : 'Escalated'}${t.escalatedAt ? ` (${formatCsvDate(t.escalatedAt)})` : ''}${t.escalationReason ? `: ${t.escalationReason}` : ''}`,
+              true
+            )
+          : '';
+
+        const replies = Array.isArray(t.replies) ? t.replies : [];
+        const latestReply = replies.length > 0 ? formatReplyForCsv(replies[replies.length - 1]) : '';
+        const fullTimeline = replies.map(formatReplyForCsv).join('\n');
+
+        const handoverStatus = t.inHandover
+          ? `Yes (${String(t.handoverLevel || 'amber').toUpperCase()})`
+          : 'No';
+
         rows.push([
-          t.id,
+          cleanCsvText(t.id, true),
+          formatCsvDate(t.dateTime || t.createdAt),
+          cleanCsvText(t.status, true),
+          cleanCsvText(t.priority, true),
+          cleanCsvText(t.onAirImpact || 'No Impact', true),
           t.tier === 'tier1' ? 'MCR (Tier 1)' : t.tier === 'mse' ? 'MSE (Media Services)' : 'Broadcast Engineering (Tier 2)',
-          escTarget === 'mse' ? 'MSE' : escTarget === 'tier2' ? 'Broadcast Engineering' : 'No',
-          t.priority,
-          t.ticketType,
-          t.status,
-          t.client,
-          t.location || '',
-          t.equipment || '',
-          t.assetBarcode || '',
-          t.cableType || '',
-          (t.servicesAffected || []).join('; '),
-          t.onAirImpact,
-          t.dateTime || t.createdAt,
-          t.title,
-          t.description,
-          t.reporter,
-          t.assignedTo,
-          Array.isArray(t.replies) ? t.replies.length : 0,
+          cleanCsvText(t.ticketType, true),
+          cleanCsvText(t.client, true),
+          cleanCsvText(t.title, true),
+          (Array.isArray(t.servicesAffected) ? t.servicesAffected : []).join(', '),
+          cleanCsvText(t.equipment, true),
+          cleanCsvText(t.location, true),
+          cleanCsvText(t.assetBarcode, true),
+          cleanCsvText(t.cableType, true),
+          cleanCsvText(t.reporter, true),
+          cleanCsvText(t.assignedTo, true) || 'Unassigned',
+          escTeam,
+          escDetails,
+          handoverStatus,
+          cleanCsvText(t.description, false),
+          replies.length,
+          latestReply,
+          fullTimeline,
+          formatCsvDate(t.updatedAt || t.createdAt),
         ]);
       });
+
       const dateStr = new Date().toISOString().slice(0, 10);
       downloadCSV(`broadcast-tickets-${dateStr}.csv`, rows);
       showToast(`Exported ${appData.tickets.length} tickets (all queues & closed) to CSV`, 'success');
@@ -4957,30 +5060,86 @@
         showToast('No handovers available to export', 'info');
         return false;
       }
-      const headers = ['Handover Title', 'Shift Label', 'Engineer', 'Created At', 'Shift Overview', 'Traffic Light', 'Source', 'Linked Ticket ID', 'Item Title', 'Notes', 'Owner'];
+
+      const headers = [
+        'Handover Date',
+        'Handover Title',
+        'Shift',
+        'Outgoing Engineer',
+        'Traffic Light',
+        'Item Source',
+        'Linked Ticket ID',
+        'Client',
+        'Ticket Status',
+        'Item Summary',
+        'Details / Next Actions',
+        'Owner',
+        'Shift Overview',
+      ];
+
+      const levelRank = { red: 0, amber: 1, green: 2 };
+      const levelLabels = {
+        red: 'RED - Immediate Follow Up',
+        amber: 'AMBER - Requires Follow Up',
+        green: 'GREEN - Completed',
+      };
+
+      const sortedHandovers = [...appData.handovers].sort(
+        (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+
       const rows = [headers];
-      appData.handovers.forEach((ho) => {
-        const items = getItemsForHandover(ho.id);
+      sortedHandovers.forEach((ho) => {
+        const items = [...getItemsForHandover(ho.id)].sort((a, b) => {
+          const ra = levelRank[a.level] ?? 9;
+          const rb = levelRank[b.level] ?? 9;
+          if (ra !== rb) return ra - rb;
+          return String(a.title || '').localeCompare(String(b.title || ''));
+        });
+
+        const formattedDate = formatCsvDate(ho.createdAt);
+        const hoTitle = cleanCsvText(ho.title, true);
+        const hoShift = cleanCsvText(ho.shiftLabel, true);
+        const hoEngineer = cleanCsvText(ho.engineer, true);
+        const hoOverview = cleanCsvText(ho.shiftSummary, false);
+
         if (items.length === 0) {
-          rows.push([ho.title, ho.shiftLabel, ho.engineer, ho.createdAt, ho.shiftSummary, '', '', '', '(No items)', '', '']);
+          rows.push([
+            formattedDate,
+            hoTitle,
+            hoShift,
+            hoEngineer,
+            'None',
+            '',
+            '',
+            '',
+            '',
+            '(No handover items)',
+            '',
+            '',
+            hoOverview,
+          ]);
         } else {
           items.forEach((item) => {
             rows.push([
-              ho.title,
-              ho.shiftLabel,
-              ho.engineer,
-              ho.createdAt,
-              ho.shiftSummary,
-              item.level.toUpperCase(),
+              formattedDate,
+              hoTitle,
+              hoShift,
+              hoEngineer,
+              levelLabels[item.level] || String(item.level || '').toUpperCase(),
               item.kind === 'ticket' ? 'Ticket' : 'Shift Note',
-              item.kind === 'ticket' ? item.id : '',
-              item.title,
-              item.notes,
-              item.owner,
+              item.kind === 'ticket' ? cleanCsvText(item.id, true) : '',
+              cleanCsvText(item.client || '', true),
+              cleanCsvText(item.ticketStatus || '', true),
+              cleanCsvText(item.title, true),
+              cleanCsvText(item.notes, false),
+              cleanCsvText(item.owner, true) || 'Unassigned',
+              hoOverview,
             ]);
           });
         }
       });
+
       const dateStr = new Date().toISOString().slice(0, 10);
       downloadCSV(`weekly-handovers-${dateStr}.csv`, rows);
       if (!silent) {
